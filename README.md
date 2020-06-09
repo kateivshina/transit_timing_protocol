@@ -1,3 +1,3 @@
-# Orbital decay in exoplanetary systems
-Code for reading, fitting and analyzing TESS data as well as running MCMC to fit decaying orbit model to detect how orbital period in exoplanetary systems changes with epoch number.
-hi
+# Transit timing protocols
+Code for reading, fitting and analyzing TESS data + running MCMC to fit a decaying orbit model to detect how orbital period changes with epoch number.
+
