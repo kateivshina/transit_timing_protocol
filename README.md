@@ -1,5 +1,5 @@
 # Transit timing protocols
-Code for reading, fitting and analyzing TESS data + running MCMC to fit a decaying orbit model to detect how orbital period changes with epoch number.
+Code for reading, fitting and analyzing TESS data + running MCMC to see how orbital period changes with epoch number.
 
 TESS data:
 1) [TESS cut](https://mast.stsci.edu/tesscut/) 
