@@ -19,7 +19,7 @@ parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 
 args = parser.parse_args()
-print(args)
+#print(args)
  
 ID = 'TIC146264536'
 MISSION = args.mission
@@ -29,7 +29,7 @@ path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
-path = f'{parent_dir}' + f'/{directory}' #os.path.join(parent_dir, directory) 
+path = f'{parent_dir}' + f'/{directory}'  
 
 if not os.path.isdir(path):
     os.mkdir(path)
@@ -37,6 +37,82 @@ if not os.path.isdir(path +'/figures'):
     os.mkdir(path +'/figures')
 
 path_to_fig = path +'/figures'
+
+#################################################################
+# Define a function to select individual transits
+#################################################################
+
+
+
+def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux):
+    '''
+    This function applies transit mask to TESS data to select individual transits 
+    and stores fluxes and times of transits in .txt file
+
+    Inputs:
+    transit (True/False) = boolean variable to check if we import data inside or outside
+    of transits 
+    path = folder where to save the output of the function
+    path_to_times = path to file storing times
+    path_to_times_folded = path to file storing transit mask
+    path_to_flux = path to file storing fluxes
+
+    '''
+
+    # load data
+    times = np.loadtxt(path_to_times)
+    time_folded = np.loadtxt(path_to_times_folded)
+    flux = np.loadtxt(path_to_flux)
+
+    indx = []
+    indx.append(0)
+    for i in range(1,time_folded.shape[0]):
+        if (time_folded[i] < 0 and time_folded[i-1] > 0):
+            indx.append(i)
+
+     
+    flux_array = []
+    time_array = []
+
+    PATH_TO_FIGURES = path + '/individual_transits_figures'
+    if os.path.isdir(PATH_TO_FIGURES) == False and transit == True:
+        os.mkdir(PATH_TO_FIGURES)
+   
+
+    for i in range(len(indx)):
+        if indx[i] != max(indx):
+            data_ = flux[indx[i]:indx[i+1]]
+            time_ = times[indx[i]:indx[i+1]]
+            flux_array.append(data_)
+            time_array.append(time_)
+            if transit == True:
+                fig = plt.figure()
+                plt.plot(time_, data_, '.k')
+                plt.xlabel("Time [days]")
+                plt.ylabel("Relative flux [ppt]")
+                plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
+                plt.close(fig)
+
+            
+        else:
+            data_ = flux[indx[i]:]
+            time_ = times[indx[i]:]
+            flux_array.append(data_)
+            time_array.append(time_)
+            if transit == True:
+                fig = plt.figure()
+                plt.plot(time_, data_, '.k')
+                plt.xlabel("Time [days]")
+                plt.ylabel("Relative flux [ppt]")
+                plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
+                plt.close(fig)
+
+    np.save(path +'/individual_flux_array.npy', flux_array)
+    np.save(path + '/individual_time_array.npy', time_array)
+
+    # to load .npy, use np.load(path + '/transit_flux.npy', allow_pickle=True))
+
+
 
 #################################################################
 # Read fits file
@@ -71,12 +147,11 @@ else:
      
     plt.figure()
     plt.imshow(mean_img.T, cmap="gray_r")
-    #plt.title("{} image of {}".format(MISSION, planet_name))
     plt.title(f"{MISSION} image of {planet_name}")
     plt.xticks([])
     plt.yticks([]);
     plt.savefig(path_to_fig + '/image_of_'+f'{ planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
     #################################################################
     # Aperture selection
@@ -113,7 +188,7 @@ else:
     plt.xticks([])
     plt.yticks([]);
     plt.savefig(path_to_fig + '/selected_aperture'+f'{ planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
 
      
@@ -126,7 +201,7 @@ else:
     plt.title("raw light curve")
     plt.xlim(time.min(), time.max());
     plt.savefig(path_to_fig + '/raw_light_curve_'+f'{planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
     #####################################################################
     # De-trending (systematic and random noise sources)
@@ -155,7 +230,7 @@ else:
     plt.title("initial de-trended light curve")
     plt.xlim(time.min(), time.max());
     plt.savefig(path_to_fig + '/initial_de-trended_lc_of'+f'{planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
 
 
@@ -170,7 +245,7 @@ else:
     plt.ylabel("Power")
     plt.text(10,2117,
         "period = {0:.4f} d".format(periodogram.period[np.argmax(periodogram.power)]))
-    print(periodogram.period[np.argmax(periodogram.power)])
+    #print(periodogram.period[np.argmax(periodogram.power)])
      
     period_grid = np.exp(np.linspace(np.log(0.05), np.log(15), 50000))
      
@@ -233,7 +308,7 @@ else:
     ax.set_ylabel("de-trended flux [ppt]")
     ax.set_xlabel("time since transit");
     plt.savefig(path_to_fig + '/de-trended_lc_of'+f'{planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
 
     #####################################################################
@@ -256,7 +331,7 @@ else:
     plt.title("final de-trended light curve")
     plt.xlim(time.min(), time.max());
     plt.savefig(path_to_fig + '/final_de-trended_lc_of'+f'{planet_name.replace(" ", "_")}')
-    plt.show()
+    #plt.show()
 
 
 
@@ -293,7 +368,9 @@ else:
         os.mkdir(path + '/transit_masked')
         os.mkdir(path + '/transit')
 
-    pdcsap_fluxes = sap_flux - pld_flux
+    #pdcsap_fluxes = sap_flux - pld_flux
+    pdcsap_fluxes = sap_flux # this is data before any de-trending
+
     # folded data with transit masked:
     total_mask = m & no_transit
     flux_masked = pdcsap_fluxes[total_mask]
@@ -313,6 +390,20 @@ else:
     np.savetxt(path + '/transit_masked/folded_time_masked.txt', time_masked)
     np.savetxt(path + '/transit_masked/time_masked.txt', times_masked)
     np.savetxt(path + '/transit_masked/flux_masked.txt', flux_masked)
+
+
+
+    select_transits(True,
+                    path + '/transit', 
+                    path + '/transit/times.txt',
+                    path + '/transit/time_folded.txt',
+                    path + '/transit/flux.txt')
+
+    select_transits(False,
+                    path + '/transit_masked', 
+                    path + '/transit_masked/time_masked.txt',
+                    path + '/transit_masked/folded_time_masked.txt',
+                    path + '/transit_masked/flux_masked.txt')
 
 
 
