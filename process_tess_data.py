@@ -63,6 +63,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
     times = np.loadtxt(path_to_times)
     time_folded = np.loadtxt(path_to_times_folded)
     flux = np.loadtxt(path_to_flux)
+     
 
     indx = []
     indx.append(0)
@@ -109,8 +110,79 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
 
     np.save(path +'/individual_flux_array.npy', flux_array)
     np.save(path + '/individual_time_array.npy', time_array)
-
+ 
     # to load .npy, use np.load(path + '/transit_flux.npy', allow_pickle=True))
+
+
+
+#################################################################
+#  Define a function to de-trend individual transits
+#################################################################
+
+def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux_masked):
+    '''
+    This function de-trends individual transits by fitting a polynomial of degree 1
+    to the data points outside of each transit and dividing each transit's data by 
+    the best fit.
+
+    Inputs:
+    path = folder where to save the output of the function
+    path_to_times = path to file storing times for each transit
+    path_to_flux = path to file storing fluxes for each transit
+    path_to_flux_masked = path to file storing fluxes outside of transit for each transit
+    path_to_time_masked = path to file storing times corresponding to fluxes in path_to_flux_masked
+    file.
+
+    Output:
+    .npy file storing de-trended indiivdual transit fluxes and .txt file storing stds of fluxes 
+    outside of transits for each transit. 
+    '''
+
+    flux_masked = np.load(path_to_flux_masked, allow_pickle=True)
+    time_masked = np.load(path_to_time_masked, allow_pickle=True)
+    flux = np.load(path_to_flux, allow_pickle=True)
+    time = np.load(path_to_times, allow_pickle=True)
+
+    print('flux_masked shape ', flux_masked.shape)
+    print('time_masked shape ', time_masked.shape)
+    print('flux shape ', flux.shape)
+    print('time shape ', time.shape)
+
+    stds = [] #list to store stds of fluxes
+    corrected_flux = []
+
+    PATH_TO_FIGURES = path + '/transits_after_detrending'
+    if os.path.isdir(PATH_TO_FIGURES) == False:
+        os.mkdir(PATH_TO_FIGURES)
+
+
+    for i in range(flux_masked.shape[0]):
+    	flux_i_out = flux_masked[i]
+    	time_i_out = time_masked[i]
+    	flux_i = flux[i]
+    	time_i = time[i]  
+    	# find the best linear fit
+    	k, b = np.polyfit(time_i_out, flux_i_out, deg=1)
+    	fit = k*time_i+b
+    	# divide the data by the best fit
+    	corrected_flux_i = flux_i/fit
+    	# fit for the points outside of transit
+    	fit_out = k*time_i_out+b 
+    	y = flux_i_out/fit_out
+
+    	# append the data to list
+    	corrected_flux.append(corrected_flux_i)
+    	stds.append(np.std(y))
+
+    	fig = plt.figure()
+    	plt.plot(time_i, corrected_flux_i, '.k')
+    	plt.xlabel("Time [days]")
+    	plt.ylabel("Relative flux [ppt]")
+    	plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
+    	plt.close(fig)
+
+    np.save(path + '/corrected_flux.npy', corrected_flux)
+    np.save(path + '/stds.npy', stds)
 
 
 
@@ -340,20 +412,20 @@ else:
     # fit
     #####################################################################
 
-    plt.figure(figsize=(10, 5))
+#    plt.figure(figsize=(10, 5))
 
-    x_fold = (x - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
-    m = np.abs(x_fold) < 0.3
-    plt.plot(x_fold[m], pld_flux[m], ".k", ms=4)
+ #   x_fold = (x - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
+ #   m = np.abs(x_fold) < 0.3
+ #   plt.plot(x_fold[m], pld_flux[m], ".k", ms=4)
 
-    bins = np.linspace(-0.5, 0.5, 60)
-    denom, _ = np.histogram(x_fold, bins)
-    num, _ = np.histogram(x_fold, bins, weights=pld_flux)
-    denom[num == 0] = 1.0
-    plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, color="C1", lw=2)
-    plt.xlim(-0.2, 0.2)
-    plt.xlabel("time since transit")
-    plt.ylabel("PLD model flux");
+ #  bins = np.linspace(-0.5, 0.5, 60)
+ #   denom, _ = np.histogram(x_fold, bins)
+ #   num, _ = np.histogram(x_fold, bins, weights=pld_flux)
+ #   denom[num == 0] = 1.0
+ #   plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, color="C1", lw=2)
+ #   plt.xlim(-0.2, 0.2)
+ #   plt.xlabel("time since transit")
+ #   plt.ylabel("PLD model flux");
     #plt.show()
 
     #####################################################################
@@ -392,19 +464,26 @@ else:
     np.savetxt(path + '/transit_masked/flux_masked.txt', flux_masked)
 
 
-
+    # transits
     select_transits(True,
                     path + '/transit', 
                     path + '/transit/times.txt',
                     path + '/transit/time_folded.txt',
                     path + '/transit/flux.txt')
 
+    # out of transits
     select_transits(False,
                     path + '/transit_masked', 
                     path + '/transit_masked/time_masked.txt',
                     path + '/transit_masked/folded_time_masked.txt',
                     path + '/transit_masked/flux_masked.txt')
 
+    detrend(path + '/transit', 
+		    path + '/transit/individual_time_array.npy', 
+		    path + '/transit/individual_flux_array.npy',
+		    path + '/transit_masked/individual_time_array.npy',
+		    path + '/transit_masked/individual_flux_array.npy')
 
 
+ 
  
