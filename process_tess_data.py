@@ -38,6 +38,15 @@ if not os.path.isdir(path +'/figures'):
 
 path_to_fig = path +'/figures'
 
+
+path_to_data = path + '/data'
+
+if not os.path.isdir(path_to_data):
+    os.mkdir(path_to_data)
+    os.mkdir(path_to_data + '/transit_masked')
+    os.mkdir(path_to_data + '/transit')
+
+
 #################################################################
 # Define a function to select individual transits
 #################################################################
@@ -143,10 +152,10 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     flux = np.load(path_to_flux, allow_pickle=True)
     time = np.load(path_to_times, allow_pickle=True)
 
-    print('flux_masked shape ', flux_masked.shape)
-    print('time_masked shape ', time_masked.shape)
-    print('flux shape ', flux.shape)
-    print('time shape ', time.shape)
+    #print('flux_masked shape ', flux_masked.shape)
+    #print('time_masked shape ', time_masked.shape)
+    #print('flux shape ', flux.shape)
+    #print('time shape ', time.shape)
 
     stds = [] #list to store stds of fluxes
     corrected_flux = []
@@ -155,31 +164,40 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     if os.path.isdir(PATH_TO_FIGURES) == False:
         os.mkdir(PATH_TO_FIGURES)
 
+    PATH_TO_FIT = path + '/fits'
+    if os.path.isdir(PATH_TO_FIT) == False:
+        os.mkdir(PATH_TO_FIT)
+
 
     for i in range(flux_masked.shape[0]):
-    	flux_i_out = flux_masked[i]
-    	time_i_out = time_masked[i]
-    	flux_i = flux[i]
-    	time_i = time[i]  
-    	# find the best linear fit
-    	k, b = np.polyfit(time_i_out, flux_i_out, deg=1)
-    	fit = k*time_i+b
-    	# divide the data by the best fit
-    	corrected_flux_i = flux_i/fit
-    	# fit for the points outside of transit
-    	fit_out = k*time_i_out+b 
-    	y = flux_i_out/fit_out
+        flux_i_out = flux_masked[i]
+        time_i_out = time_masked[i]
+        flux_i = flux[i]
+        time_i = time[i]  
+        # find the best linear fit
+        k, b = np.polyfit(time_i_out, flux_i_out, deg=1)
+        fit = k*time_i+b
+        # divide the data by the best fit
+        corrected_flux_i = flux_i/fit
+        # fit for the points outside of transit
+        fit_out = k*time_i_out+b 
+        y = flux_i_out/fit_out
+        # append the data to list
+        corrected_flux.append(corrected_flux_i)
+        stds.append(np.std(y))
 
-    	# append the data to list
-    	corrected_flux.append(corrected_flux_i)
-    	stds.append(np.std(y))
+        fig = plt.figure()
+        plt.plot(time_i, fit, 'r')
+        plt.plot(time_i, flux_i, '.b')
+        plt.savefig(PATH_TO_FIT + f'/transit_{i}')
+        plt.close(fig)
 
-    	fig = plt.figure()
-    	plt.plot(time_i, corrected_flux_i, '.k')
-    	plt.xlabel("Time [days]")
-    	plt.ylabel("Relative flux [ppt]")
-    	plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
-    	plt.close(fig)
+        fig = plt.figure()
+        plt.plot(time_i, corrected_flux_i, '.k')
+        plt.xlabel("Time [days]")
+        plt.ylabel("Relative flux [ppt]")
+        plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
+        plt.close(fig)
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)
@@ -190,17 +208,96 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 # Read fits file
 #################################################################
 
+ 
+ 
+
+if int(cadence) == 2:
+    with fits.open(path_to_data_file, mode="readonly") as hdulist:
+        tess_bjds = hdulist[1].data['TIME']
+        sap_fluxes = hdulist[1].data['SAP_FLUX']
+        pdcsap_fluxes = hdulist[1].data['PDCSAP_FLUX']
+        #print('Header:', hdulist[0].header)
+
+    # Start figure and axis.
+    fig, ax = plt.subplots()
+
+    # Plot the timeseries in black circles.
+    ax.plot(tess_bjds, pdcsap_fluxes, '.k')
+    plt.xlabel('Time')
+    plt.ylabel('Flux')
+    plt.savefig(path_to_fig + '/lc_'+f'{ planet_name.replace(" ", "_")}')
+    plt.close(fig)
+
+    with fits.open(path_to_data_file, mode="readonly") as hdulist:
+        aperture = hdulist[2].data
+
+    # Start figure and axis.
+    fig, ax = plt.subplots()
+    # Display the pixels as an image.
+    cax = ax.imshow(aperture, cmap=plt.cm.YlGnBu_r, origin="lower")
+    # Add a color bar.
+    cbar = fig.colorbar(cax)
+    # Add a title to the plot.
+    fig.suptitle("Aperture")
+    plt.savefig(path_to_fig + '/selected_aperture'+f'{ planet_name.replace(" ", "_")}')
+
+
+
+    time = tess_bjds
+
+    m = np.isfinite(pdcsap_fluxes)
+    time = np.ascontiguousarray(time[m])
+    pdcsap_fluxes = np.ascontiguousarray(pdcsap_fluxes[m])
+
+    ##############################################
+    # Periodogram
+    model = BoxLeastSquares(time, pdcsap_fluxes)
+    periodogram = model.autopower(0.2)
+    plt.plot(periodogram.period, periodogram.power)  
+    plt.xlabel("Period [day]")
+    plt.ylabel("Power")
+    plt.text(10,2117,
+        "period = {0:.4f} d".format(periodogram.period[np.argmax(periodogram.power)]))
+
 
  
-#wasp-12
-tpf_file = path_to_data_file
+    period_grid = np.exp(np.linspace(np.log(0.05), np.log(15), 50000))
 
-if cadence == 2:
-    pass
+    bls = BoxLeastSquares(time, pdcsap_fluxes)
+    bls_power = bls.power(period_grid, 0.02, oversample=20)
+    plt.xlabel("time [days]")
+    plt.ylabel("de-trended flux [ppt]")
+
+    # Save the highest peak as the planet candidate
+    index = np.argmax(bls_power.power)
+    bls_period = bls_power.period[index]
+    bls_t0 = bls_power.transit_time[index]
+    bls_depth = bls_power.depth[index]
+    transit_mask = bls.transit_mask(time, bls_period, 0.2, bls_t0)
+
+
+    x = np.ascontiguousarray(time, dtype=np.float64)
+    y = np.ascontiguousarray(pdcsap_fluxes, dtype=np.float64) 
+     
+    # Plot the folded transit
+    #ax = axes[1]
+    x_fold = (time - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
+    m = np.abs(x_fold) < 0.4
+    not_transit = ~transit_mask
+
+    # folded data with transit masked:
+    total_mask = m & not_transit
+    flux_masked = pdcsap_fluxes[total_mask]
+    time_masked = x_fold[total_mask]
+    times_masked = time[total_mask] # times (not relative)
+    # folded data with transit included:
+    flux_folded = pdcsap_fluxes[m]
+    time_folded = x_fold[m]
+    times = time[m]
+ 
 
 else:
-    #with tpf_file.hdu as hdu:
-    with fits.open(tpf_file, mode="readonly") as hdu: 
+    with fits.open(path_to_data_file, mode="readonly") as hdu: 
         tpf = hdu[1].data
         tpf_hdr = hdu[1].header
 
@@ -433,15 +530,10 @@ else:
     #####################################################################
 
 
-    path = path + '/data'
+    
 
-    if not os.path.isdir(path):
-        os.mkdir(path)
-        os.mkdir(path + '/transit_masked')
-        os.mkdir(path + '/transit')
-
-    #pdcsap_fluxes = sap_flux - pld_flux
-    pdcsap_fluxes = sap_flux # this is data before any de-trending
+    pdcsap_fluxes = sap_flux - pld_flux
+    #pdcsap_fluxes = sap_flux # this is data before any de-trending
 
     # folded data with transit masked:
     total_mask = m & no_transit
@@ -453,36 +545,39 @@ else:
     time_folded = x_fold[m]
     times = time[m]
 
-    # save folded transits
-    np.savetxt(path + '/transit/times.txt', times)
-    np.savetxt(path + '/transit/flux.txt', flux_folded)
-    np.savetxt(path + '/transit/time_folded.txt', time_folded)
-
-    # save masked transits
-    np.savetxt(path + '/transit_masked/folded_time_masked.txt', time_masked)
-    np.savetxt(path + '/transit_masked/time_masked.txt', times_masked)
-    np.savetxt(path + '/transit_masked/flux_masked.txt', flux_masked)
 
 
-    # transits
-    select_transits(True,
-                    path + '/transit', 
-                    path + '/transit/times.txt',
-                    path + '/transit/time_folded.txt',
-                    path + '/transit/flux.txt')
 
-    # out of transits
-    select_transits(False,
-                    path + '/transit_masked', 
-                    path + '/transit_masked/time_masked.txt',
-                    path + '/transit_masked/folded_time_masked.txt',
-                    path + '/transit_masked/flux_masked.txt')
+# save folded transits
+np.savetxt(path_to_data + '/transit/times.txt', times)
+np.savetxt(path_to_data + '/transit/flux.txt', flux_folded)
+np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
 
-    detrend(path + '/transit', 
-		    path + '/transit/individual_time_array.npy', 
-		    path + '/transit/individual_flux_array.npy',
-		    path + '/transit_masked/individual_time_array.npy',
-		    path + '/transit_masked/individual_flux_array.npy')
+# save masked transits
+np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
+np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
+np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
+
+
+# transits
+select_transits(True,
+                path_to_data + '/transit', 
+                path_to_data + '/transit/times.txt',
+                path_to_data + '/transit/time_folded.txt',
+                path_to_data + '/transit/flux.txt')
+
+# out of transits
+select_transits(False,
+                path_to_data + '/transit_masked', 
+                path_to_data + '/transit_masked/time_masked.txt',
+                path_to_data + '/transit_masked/folded_time_masked.txt',
+                path_to_data + '/transit_masked/flux_masked.txt')
+
+detrend(path_to_data + '/transit', 
+		path_to_data + '/transit/individual_time_array.npy', 
+		path_to_data + '/transit/individual_flux_array.npy',
+		path_to_data + '/transit_masked/individual_time_array.npy',
+		path_to_data + '/transit_masked/individual_flux_array.npy')
 
 
  
