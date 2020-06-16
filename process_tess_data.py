@@ -83,6 +83,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
      
     flux_array = []
     time_array = []
+    time_folded_array = []
 
     PATH_TO_FIGURES = path + '/individual_transits_figures'
     if os.path.isdir(PATH_TO_FIGURES) == False and transit == True:
@@ -93,8 +94,10 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
         if indx[i] != max(indx):
             data_ = flux[indx[i]:indx[i+1]]
             time_ = times[indx[i]:indx[i+1]]
+            time_folded_ = time_folded[indx[i]:indx[i+1]]
             flux_array.append(data_)
             time_array.append(time_)
+            time_folded_array.append(time_folded_)
             if transit == True:
                 fig = plt.figure()
                 plt.plot(time_, data_, '.k')
@@ -107,8 +110,10 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
         else:
             data_ = flux[indx[i]:]
             time_ = times[indx[i]:]
+            time_folded_ = time_folded[indx[i]:]
             flux_array.append(data_)
             time_array.append(time_)
+            time_folded_array.append(time_folded_)
             if transit == True:
                 fig = plt.figure()
                 plt.plot(time_, data_, '.k')
@@ -119,6 +124,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
 
     np.save(path +'/individual_flux_array.npy', flux_array)
     np.save(path + '/individual_time_array.npy', time_array)
+    np.save(path + '/individual_time_folded_array.npy', time_folded_array)
  
     # to load .npy, use np.load(path + '/transit_flux.npy', allow_pickle=True))
 
@@ -248,7 +254,7 @@ if int(cadence) == 2:
     m = np.isfinite(pdcsap_fluxes)
     time = np.ascontiguousarray(time[m])
     pdcsap_fluxes = np.ascontiguousarray(pdcsap_fluxes[m])
-    print('time shape ', time.shape)
+
     ##############################################
     # Periodogram
     model = BoxLeastSquares(time, pdcsap_fluxes)
@@ -294,8 +300,22 @@ if int(cadence) == 2:
     flux_folded = pdcsap_fluxes[m]
     time_folded = x_fold[m]
     times = time[m]
-    print('times shape ', times.shape)
+  
+
+
+    # Plot the folded transit
+     
+    #####################################################################
+    #plot
+    #####################################################################
+    #figure = plt.figure()
+    #plt.plot(x_fold[m], pdcsap_fluxes[m], ".k")
  
+    #plt.ylabel("de-trended flux")
+    #plt.xlabel("time since transit");
+    #plt.show()
+
+
 
 else:
     with fits.open(path_to_data_file, mode="readonly") as hdu: 
