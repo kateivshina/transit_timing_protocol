@@ -248,7 +248,7 @@ if int(cadence) == 2:
     m = np.isfinite(pdcsap_fluxes)
     time = np.ascontiguousarray(time[m])
     pdcsap_fluxes = np.ascontiguousarray(pdcsap_fluxes[m])
-
+    print('time shape ', time.shape)
     ##############################################
     # Periodogram
     model = BoxLeastSquares(time, pdcsap_fluxes)
@@ -294,6 +294,7 @@ if int(cadence) == 2:
     flux_folded = pdcsap_fluxes[m]
     time_folded = x_fold[m]
     times = time[m]
+    print('times shape ', times.shape)
  
 
 else:
