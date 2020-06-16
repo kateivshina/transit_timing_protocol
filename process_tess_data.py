@@ -409,7 +409,7 @@ else:
     #####################################################################
 
     model = BoxLeastSquares(time, sap_flux - pld_flux)
-    periodogram = model.autopower(0.2) #0.2 - duration?
+    periodogram = model.autopower(0.2) #0.2 - duration
     plt.plot(periodogram.period, periodogram.power)  
     plt.xlabel("Period [day]")
     plt.ylabel("Power")
