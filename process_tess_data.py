@@ -174,6 +174,9 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     if os.path.isdir(PATH_TO_FIT) == False:
         os.mkdir(PATH_TO_FIT)
 
+    ks = []
+    bs = []
+
 
     for i in range(flux_masked.shape[0]):
         flux_i_out = flux_masked[i]
@@ -191,6 +194,8 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         # append the data to list
         corrected_flux.append(corrected_flux_i)
         stds.append(np.std(y))
+        ks.append(k)
+        bs.append(b)
 
         fig = plt.figure()
         plt.plot(time_i, fit, 'r')
@@ -207,6 +212,10 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)
+    np.save(path + '/ks.npy', ks)
+    np.save(path + '/bs.npy', bs)
+
+
 
 
 
@@ -579,7 +588,7 @@ np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
 np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
 np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
 
-
+'''
 # transits
 select_transits(True,
                 path_to_data + '/transit', 
@@ -593,6 +602,7 @@ select_transits(False,
                 path_to_data + '/transit_masked/time_masked.txt',
                 path_to_data + '/transit_masked/folded_time_masked.txt',
                 path_to_data + '/transit_masked/flux_masked.txt')
+'''
 
 detrend(path_to_data + '/transit', 
 		path_to_data + '/transit/individual_time_array.npy', 
