@@ -14,14 +14,18 @@ parser.add_argument('--mission')
 parser.add_argument('--planet')
 parser.add_argument('--cadence')
 parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--mass')
+parser.add_argument('--semi_major_axis')
+parser.add_argument('--inclination')
+parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
+parser.add_argument('--refolded')
+
 
 args = parser.parse_args()
-#print(args)
+
+
  
-ID = 'TIC146264536'
 MISSION = args.mission
 planet_name = args.planet
 cadence = args.cadence
@@ -174,8 +178,8 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     if os.path.isdir(PATH_TO_FIT) == False:
         os.mkdir(PATH_TO_FIT)
 
-    ks = []
-    bs = []
+    coeffs = []
+  
 
 
     for i in range(flux_masked.shape[0]):
@@ -194,8 +198,8 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         # append the data to list
         corrected_flux.append(corrected_flux_i)
         stds.append(np.std(y))
-        ks.append(k)
-        bs.append(b)
+        coeffs.append([k, b])
+        
 
         fig = plt.figure()
         plt.plot(time_i, fit, 'r')
@@ -212,8 +216,7 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)
-    np.save(path + '/ks.npy', ks)
-    np.save(path + '/bs.npy', bs)
+    np.savetxt(path + '/coeffs.txt', coeffs)
 
 
 
