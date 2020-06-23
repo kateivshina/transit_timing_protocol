@@ -81,7 +81,7 @@ params_final.t0 = 0
 params_final.per = per
 params_final.rp = rp_i
 params_final.a = a_i
-params_final.inc =b_i 
+params_final.inc = b_i 
 params_final.ecc = 0
 params_final.w = 96
 params_final.u = [u1_i, u2_i]
@@ -165,9 +165,7 @@ samples = samples[:, burn_in:, :].reshape((-1, ndim))
 # Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
 rp_i, a_i, b_i, u1_i, u2_i  = map(
 	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-     
-#t0s.append([round(t0_mcmc[0],4),round(t0_mcmc[1],4), round(t0_mcmc[2],4)])
-#np.savetxt('t0s.txt', np.array(t0s))
+
 
 samples = sampler.flatchain
 theta_max  = samples[np.argmax(sampler.flatlnprobability)]
@@ -202,9 +200,9 @@ ax.legend(('BATMAN','TESS'), loc=2)
 plt.show()
      
  
-save_to = path + '/data/transit'
+save_to = path + '/figures'
 final_fig.savefig(save_to + '/MCMCfit.png', bbox_inches='tight')
-print('finished')
+
 
 param_names = ["$rp$", "$a$", "$i$", "u1", "u2"]
 corn_fig = corner.corner(samples, labels=param_names)

@@ -118,7 +118,7 @@ def lnprob(theta, x, y, sigma, r, a, b, u1, u2):
 
 
 params_final = []
-
+t0_w_uncert = []
 
 for i in range(flux.shape[0]):
     time_i = time[i]
@@ -156,8 +156,8 @@ for i in range(flux.shape[0]):
     samples = samples[:, burn_in:, :].reshape((-1, ndim))
 
     # Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
-    #t0, k, b  = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-     
+    t01, k1, b1  = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+    t0_w_uncert.append(t01)  
  
  
     samples = sampler.flatchain
@@ -171,4 +171,4 @@ for i in range(flux.shape[0]):
     corn_fig.savefig(path_to_figs + f'/corner_{i}.png', bbox_inches='tight')
 
 np.savetxt(path + '/data/transit/t0_k_b.txt', np.array(params_final))
-
+np.savetxt(path + '/data/transit/t0_w_uncert.txt', np.array(t0_w_uncert))

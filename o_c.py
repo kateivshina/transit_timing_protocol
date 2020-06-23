@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 from scipy.stats import binned_statistic
 import batman
 import emcee
@@ -38,17 +37,26 @@ path = f'{parent_dir}' + f'/{directory}'
 
 
 # MCMC parameters
-nsteps = 1000
-burn_in = 100
+nsteps = 20000
+burn_in = 5000
 ndim = 2
 nwalkers = 100
 
-
+t0_w_uncert = np.loadtxt(path + '/data/transit/t0_w_uncert.txt')
+err = t0_w_uncert[:,1]
 t0_k_b = np.loadtxt(path + '/data/transit/t0_k_b.txt')
 t0s = t0_k_b[:, 0]
 
 # epoch number 
-N = np.array(range(0, t0_k_b.shape[0]))
+#N = np.array(range(0, t0_k_b.shape[0]))
+# wasp 12
+#N_1 = np.array(range(0, 11))
+#N_2 = np.array(range(15, t0_k_b.shape[0]+4))
+#wasp 4
+N_1 = np.array(range(0, 9))
+N_2 = np.array(range(11, t0_k_b.shape[0]+2))
+N = np.concatenate((N_1, N_2), axis=0)
+
 # need to input actual stds
 
 sigma = 0.00065836
@@ -59,7 +67,7 @@ t0_i = t0s[0]
 # Priors.
 def lnprior(theta, t0_init): 
 	per, t0 = theta
-	if (0. < per < 2) and \
+	if (0. < per < 1.1) and \
 	(t0_init - 0.25 < t0 < t0_init + 0.25):
 		return 0
 	return -np.inf
@@ -100,12 +108,24 @@ print ('Sampling complete!')
 
 samples = sampler.flatchain
 
+# Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
+period, t0  = map(
+	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+     
+print('period, t0 ', period, t0)     
 theta_max  = samples[np.argmax(sampler.flatlnprobability)]
-
+print('theta max', theta_max)
 period, t0 = theta_max[0], theta_max[1]
 
 calculated = N*period + t0
 o_c = t0s-calculated
-plt.plot(N, o_c, '.k')
+plt.figure()
+plt.errorbar(N, o_c*24*60, yerr = err*24*60, fmt='o', mew = 1)   # O-C_1 plot (mcmc fitted params)
+
+#plt.plot(N, o_c*24*60, '.k')
+plt.xlabel('Epoch')
+plt.ylabel('Time deviation [min]')
+plt.title(f'{planet_name} transits (constant period model)')
+plt.savefig(path + '/figures/o_c.png')
 plt.show()
 

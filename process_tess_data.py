@@ -591,7 +591,7 @@ np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
 np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
 np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
 
-'''
+
 # transits
 select_transits(True,
                 path_to_data + '/transit', 
@@ -605,7 +605,7 @@ select_transits(False,
                 path_to_data + '/transit_masked/time_masked.txt',
                 path_to_data + '/transit_masked/folded_time_masked.txt',
                 path_to_data + '/transit_masked/flux_masked.txt')
-'''
+
 
 detrend(path_to_data + '/transit', 
 		path_to_data + '/transit/individual_time_array.npy', 

@@ -74,8 +74,8 @@ for i in range(flux.shape[0]):
 
 	fit = k*time_+b
 	detrended_flux_ = flux_/fit
-	plt.plot(time_, detrended_flux_, '.k')
-	plt.show()
+	#plt.plot(time_, detrended_flux_, '.k')
+	#plt.show()
 
 	# calculate std for out of transit data
 	flux_out_ = flux_i[total_mask]
@@ -94,7 +94,3 @@ np.save(path + '/stds_refolded.npy', stds)
 np.save(path + '/individual_flux_array_clean_refolded.npy', flux_array)
 np.save(path + '/individual_time_array_clean_refolded.npy', time_array)
 np.save(path + '/individual_time_folded_array_clean_refolded.npy', folded_time_array)
- 
-
-#print('transit mask ', transit_mask)
-#print('equal ? ', m==transit_mask)
