@@ -1,6 +1,5 @@
 import numpy as np
 from astropy.io import fits
-import lightkurve as lk
 import matplotlib.pyplot as plt
 from astropy.timeseries import BoxLeastSquares
 from scipy.signal import savgol_filter
@@ -15,7 +14,7 @@ parser.add_argument('--planet')
 parser.add_argument('--cadence')
 parser.add_argument('--radius') #, nargs='*')
 parser.add_argument('--semi_major_axis')
-parser.add_argument('--inclination')
+parser.add_argument('--b')
 parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
@@ -88,6 +87,11 @@ for i in range(flux.shape[0]):
 	folded_time_array.append(time_folded_)
 	detrended_flux_array.append(detrended_flux_)
 	stds.append(std)
+
+detrended_flux_array = np.array(detrended_flux_array, dtype=object, copy=False)
+flux_array = np.array(flux_array, dtype=object, copy=False)
+time_array = np.array(time_array, dtype=object, copy=False)
+folded_time_array = np.array(folded_time_array, dtype=object, copy=False)
 
 np.save(path + '/corrected_flux_refolded.npy', detrended_flux_array)
 np.save(path + '/stds_refolded.npy', stds)

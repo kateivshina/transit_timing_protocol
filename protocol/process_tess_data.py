@@ -1,6 +1,5 @@
 import numpy as np
 from astropy.io import fits
-import lightkurve as lk
 import matplotlib.pyplot as plt
 from astropy.timeseries import BoxLeastSquares
 from scipy.signal import savgol_filter
@@ -15,7 +14,7 @@ parser.add_argument('--planet')
 parser.add_argument('--cadence')
 parser.add_argument('--radius') #, nargs='*')
 parser.add_argument('--semi_major_axis')
-parser.add_argument('--inclination')
+parser.add_argument('--b')
 parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
@@ -125,6 +124,10 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 plt.ylabel("Relative flux [ppt]")
                 plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
                 plt.close(fig)
+    
+    flux_array = np.array(flux_array, dtype=object, copy=False)
+    time_array = np.array(time_array, dtype=object, copy=False)
+    time_folded_array = np.array(time_folded_array, dtype=object, copy=False)
 
     np.save(path +'/individual_flux_array.npy', flux_array)
     np.save(path + '/individual_time_array.npy', time_array)
@@ -213,6 +216,8 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         plt.ylabel("Relative flux [ppt]")
         plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
         plt.close(fig)
+        
+    corrected_flux = np.array(corrected_flux, dtype=object, copy=False)
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)

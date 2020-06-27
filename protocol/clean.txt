@@ -1,4 +1,4 @@
 --mission=TESS
 --planet=WASP 4b
---parent_dir=/Users/ivshina/Desktop/usrp/orbital_decay
+--parent_dir=/Users/kate/Documents/USRP/TTP
 --delete_arrs=0 10

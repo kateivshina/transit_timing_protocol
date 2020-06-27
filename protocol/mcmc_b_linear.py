@@ -6,8 +6,13 @@ import emcee
 import os, sys, time
 import pandas as pd
 from argparse import ArgumentParser
+import scipy.optimize  
 import corner
+from ctypes import RTLD_GLOBAL
 
+#import DLFCN
+#sys.setdlopenflags(sys.getdlopenflags() | DLFCN.RTLD_GLOBAL)
+sys.setdlopenflags(sys.getdlopenflags() ^ RTLD_GLOBAL)
 
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
@@ -16,7 +21,7 @@ parser.add_argument('--planet')
 parser.add_argument('--cadence')
 parser.add_argument('--radius') #, nargs='*')
 parser.add_argument('--semi_major_axis')
-parser.add_argument('--inclination')
+parser.add_argument('--b')
 parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
@@ -60,15 +65,15 @@ else:
   stds = np.load(path + '/data/transit/stds_clean.npy', allow_pickle = True)
 
 
-r, a, b, u1, u2  = theta[0], theta[1], theta[2], theta[3], theta[4]
+r, a, b, u1  = theta[0], theta[1], theta[2], theta[3]
 
 coeffs = np.loadtxt(path + '/data/transit/coeffs.txt')
 
  
 
 # MCMC parameters
-nsteps = 2000
-burn_in = 500
+nsteps = 5000
+burn_in = 2000
 ndim = 3
 nwalkers = 100
 
@@ -83,21 +88,22 @@ def lnprior(theta):
 	return -np.inf
 
 
-def lnlike(theta, x, y, sigma, r, a, b, u1, u2, per=per):
+#def lnlike(theta, x, y, sigma, r, a, b, u1, per=per):
+def lnlike(theta, x, y, sigma, r, a, b, u1):
   t0, k, c = theta
 
-  u1 = u1	# Limb Darkening coefficient 1
-  u2 = u2 # Limb Darkening coefficient 2
+  	# Limb Darkening coefficient 1
+  u2 = 0 # Limb Darkening coefficient 2
   # Set up transit parameters.
   params = batman.TransitParams()
   params.t0 = t0
   params.per = per
   params.rp = r
   params.a = a
-  params.inc = b
+  params.inc = np.arccos(b/a)*(180./np.pi)
   params.ecc = 0
   params.w = 96
-  params.u = [u1, u2]
+  params.u = [u1, 0]
   params.limb_dark = 'quadratic'
   # Initialize the transit model.
   m_init = batman.TransitModel(params, x)
@@ -106,13 +112,16 @@ def lnlike(theta, x, y, sigma, r, a, b, u1, u2, per=per):
   return -0.5*(np.sum((y/(k*x+c)-model)**2*inv_sigma2))
 	
  
+ 
+
+# Define log 
 
 # Define log of probability function.
-def lnprob(theta, x, y, sigma, r, a, b, u1, u2):
+def lnprob(theta, x, y, sigma, r, a, b, u1):
   lp = lnprior(theta)
   if not np.isfinite(lp):
     return -np.inf
-  return lp + lnlike(theta, x, y, sigma, r, a, b, u1, u2)
+  return lp + lnlike(theta, x, y, sigma, r, a, b, u1)
 
 
 
@@ -132,14 +141,19 @@ for i in range(flux.shape[0]):
     k_i = coeffs[i, 0]
     c_i = coeffs[i, 1]
 
-
-    initial_params = t0_i, k_i, c_i 
+ 
+    initial_params = t0_i, k_i, c_i
+    nll = lambda *args: -lnlike(*args) 
+    initial = np.array([t0_i, k_i, c_i]) + 1e-5*np.random.randn(ndim)
+    soln = scipy.optimize.minimize(nll, initial, args=(time_i, flux_i, sigma, r, a, b, u1))  
+    t0_ml, k_ml, c_ml = soln.x 
+     
 
     # Initialize walkers around maximum likelihood.
     pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
 
     # Set up sampler.
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(np.array(time_i), np.array(flux_i), sigma, r, a, b, u1, u2))
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(np.array(time_i), np.array(flux_i), sigma, r, a, b, u1))
 
     # Run MCMC for n steps and display progress bar.
     width = 50
@@ -161,8 +175,8 @@ for i in range(flux.shape[0]):
  
  
     samples = sampler.flatchain
-    theta_max  = samples[np.argmax(sampler.flatlnprobability)]
-    params_final.append(theta_max)
+    #theta_max  = samples[np.argmax(sampler.flatlnprobability)]
+    params_final.append([t0_ml, k_ml, c_ml])
   
 
     param_names = ["$t_0$", "$k$", "$b$"]

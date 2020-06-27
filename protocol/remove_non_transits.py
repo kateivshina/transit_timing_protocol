@@ -1,11 +1,4 @@
 import numpy as np
-from astropy.io import fits
-import lightkurve as lk
-import matplotlib.pyplot as plt
-from astropy.timeseries import BoxLeastSquares
-from scipy.signal import savgol_filter
-import exoplanet as xo
-import os
 from argparse import ArgumentParser
 
 # parse data about the planet

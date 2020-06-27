@@ -2,9 +2,9 @@
 --planet=WASP 4b
 --cadence=2
 --radius=0.12
---semi_major_axis=4.323
---inclination=88.87
+--semi_major_axis=5.299
+--b=0.15
 --period=1.338231602
---parent_dir=/Users/ivshina/Desktop/usrp/orbital_decay
---path_to_data_file=/Users/ivshina/Desktop/usrp/orbital_decay/wasp4_lc.fits
+--parent_dir=/Users/kate/Documents/USRP/TTP
+--path_to_data_file=/Users/kate/Documents/USRP/TTP/lc/wasp4_lc.fits
 --refolded=True

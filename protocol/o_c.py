@@ -6,6 +6,7 @@ import emcee
 import corner
 import os, sys, time
 import pandas as pd
+from scipy.optimize import minimize
 from argparse import ArgumentParser
 
 # parse data about the planet
@@ -15,7 +16,7 @@ parser.add_argument('--planet')
 parser.add_argument('--cadence')
 parser.add_argument('--radius') #, nargs='*')
 parser.add_argument('--semi_major_axis')
-parser.add_argument('--inclination')
+parser.add_argument('--b')
 parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
@@ -90,7 +91,11 @@ def lnprob(theta, x, y, sigma, t0_init):
 
 
 initial_params = per_i, t0_i 
-
+ 
+nll = lambda *args: -lnlike(*args) 
+initial = np.array([per_i, t0_i]) + 1e-5*np.random.randn(ndim)
+soln = minimize(nll, initial, args=(N, t0s, sigma))  
+per_ml, t0_ml  = soln.x 
 # Initialize walkers around maximum likelihood.
 pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
 
@@ -117,7 +122,7 @@ theta_max  = samples[np.argmax(sampler.flatlnprobability)]
 print('theta max', theta_max)
 period, t0 = theta_max[0], theta_max[1]
 
-calculated = N*period + t0
+calculated = N*per_ml + t0_ml
 o_c = t0s-calculated
 plt.figure()
 plt.errorbar(N, o_c*24*60, yerr = err*24*60, fmt='o', mew = 1)   # O-C_1 plot (mcmc fitted params)
