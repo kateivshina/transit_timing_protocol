@@ -35,40 +35,29 @@ parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
 path = f'{parent_dir}' + f'/{directory}'  
 
+path2data = path + '/data/transit/o.csv'
 
 
 # MCMC parameters
-nsteps = 20000
-burn_in = 5000
+nsteps = 20 
+burn_in = 5 
 ndim = 2
 nwalkers = 100
 
-t0_w_uncert = np.loadtxt(path + '/data/transit/t0_w_uncert.txt')
-err = t0_w_uncert[:,1]
-t0_k_b = np.loadtxt(path + '/data/transit/t0_k_b.txt')
-t0s = t0_k_b[:, 0]
-
-# epoch number 
-#N = np.array(range(0, t0_k_b.shape[0]))
-# wasp 12
-#N_1 = np.array(range(0, 11))
-#N_2 = np.array(range(15, t0_k_b.shape[0]+4))
-#wasp 4
-N_1 = np.array(range(0, 9))
-N_2 = np.array(range(11, t0_k_b.shape[0]+2))
-N = np.concatenate((N_1, N_2), axis=0)
+df = pd.read_csv(path2data)
+err = df['err']
+t0s = df['t0']
+epoch = df['Epoch']
 
 # need to input actual stds
-
 sigma = np.mean(err)
 per_i = float(args.period)
-t0_i = t0s[0]
-
+t0_i = 2456180.558712
 
 # Priors.
 def lnprior(theta, t0_init): 
 	per, t0 = theta
-	if (0. < per < 1.1) and \
+	if (0. < per < 2) and \
 	(t0_init - 0.25 < t0 < t0_init + 0.25):
 		return 0
 	return -np.inf
@@ -94,13 +83,13 @@ initial_params = per_i, t0_i
  
 nll = lambda *args: -lnlike(*args) 
 initial = np.array([per_i, t0_i]) + 1e-5*np.random.randn(ndim)
-soln = minimize(nll, initial, args=(N, t0s, sigma))  
+soln = minimize(nll, initial, args=(epoch, t0s, sigma))  
 per_ml, t0_ml  = soln.x 
 # Initialize walkers around maximum likelihood.
 pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
 
 # Set up sampler.
-sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(N, t0s, sigma, t0_i))
+sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(epoch, t0s, sigma, t0_i))
 
 # Run MCMC for n steps and display progress bar.
 width = 50
@@ -117,20 +106,22 @@ samples = sampler.flatchain
 period, t0  = map(
 	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
      
-print('period, t0 ', period, t0)     
+#print('period, t0 ', period, t0)     
 theta_max  = samples[np.argmax(sampler.flatlnprobability)]
-print('theta max', theta_max)
+#print('theta max', theta_max)
 period, t0 = theta_max[0], theta_max[1]
+print('Period: ', per_ml)
+print('t0: ', t0_ml)
 
-calculated = N*per_ml + t0_ml
+calculated = epoch*per_ml + t0_ml
 o_c = t0s-calculated
 plt.figure()
-plt.errorbar(N, o_c*24*60, yerr = err*24*60, fmt='o', mew = 1)   # O-C_1 plot (mcmc fitted params)
+plt.errorbar(epoch, o_c*24*60, yerr = err*24*60, fmt='o', mew = 1)   # O-C_1 plot (mcmc fitted params)
 
 #plt.plot(N, o_c*24*60, '.k')
 plt.xlabel('Epoch')
 plt.ylabel('Time deviation [min]')
 plt.title(f'{planet_name} transits (constant period model)')
-plt.savefig(path + '/figures/o_c.png')
+plt.savefig(path + '/figures/o_c_combined.png')
 plt.show()
 

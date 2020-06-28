@@ -40,7 +40,8 @@ parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
 path = f'{parent_dir}' + f'/{directory}'  
 
-path_to_figs = path + '/data/transit/corner_plots'
+path_to_figs = path + '/figures/corner_plots'
+
 
 if not os.path.isdir(path_to_figs):
     os.mkdir(path_to_figs)
