@@ -61,7 +61,9 @@ else:
 
 
 def lnlike(theta, x, y, sigma, per=per):
-  r, a, b, u1, u2 = theta
+  r, a, b, q1, q2 = theta
+  u1 = 2*np.sqrt(q1)*q2
+  u2 = np.sqrt(q1)*(1-2*q2)
   # From Claret et al. 2012/13
   u1 = u1 # Limb Darkening coefficient 1
   u2 = u2 # Limb Darkening coefficient 2
@@ -98,16 +100,22 @@ burn_in = 2000
 ndim = 5
 nwalkers = 100
 
+q1_i = (u1_i+u2_i)**2
+q2_i = u1_i/(2*(u1_i+u2_i))
+
 nll = lambda *args: -lnlike(*args)
-initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) + 1e-5*np.random.randn(ndim)
+initial = np.array([rp_i, a_i, b_i, q1_i, q2_i]) + 1e-5*np.random.randn(ndim)
 soln = minimize(nll, initial, args=(time, flux, sigma))
-rp_ml, a_ml, b_ml, u1_ml, u2_ml = soln.x
+rp_ml, a_ml, b_ml, q1_ml, q2_ml = soln.x
+u1_ml = 2*np.sqrt(q1_ml)*q2_ml
+u2_ml = np.sqrt(q1_ml)*(1-2*q2_ml)
 
 print("Maximum likelihood estimates:")
 print("rp = {0:.3f}".format(rp_ml))
 print("a = {0:.3f}".format(a_ml))
 print("b = {0:.3f}".format(b_ml))
 print("u1 = {0:.3f}".format(u1_ml))
+print("u2 = {0:.3f}".format(u2_ml))
 
 yerr = np.full((time.shape[0]), sigma) 
 
@@ -137,11 +145,11 @@ ax.legend(('BATMAN','TESS'), loc=2)
 plt.show()
      
  
-save_to = path + '/figures'
+save_to = path + '/figures/dir'
 final_fig.savefig(save_to + '/MCMCfit.png', bbox_inches='tight')
 
  
-
+'''
 # Priors
 def lnprior(theta):
 	rp, a, b, u1, u2 = theta
@@ -153,9 +161,17 @@ def lnprior(theta):
   and (0. <= u1+u2 < 1):
 		return 0
 	return -np.inf
+'''
 
-
-
+def lnprior(theta):
+  rp, a, b, q1, q2 = theta
+  if (0. < rp) \
+  and (0. <= a) \
+  and (0. <= b < a) \
+  and (0. < q1 < 1) \
+  and (0. < q2 < 1):
+    return 0
+  return -np.inf
 
 # Define log of probability function.
 def lnprob(theta, x, y, sigma):
@@ -166,7 +182,7 @@ def lnprob(theta, x, y, sigma):
 
 
 
-initial_params = rp_i, a_i, b_i, u1_i, u2_i 
+initial_params = rp_i, a_i, b_i, q1_i, q2_i 
 
 # Initialize walkers around maximum likelihood.
 pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
@@ -187,15 +203,20 @@ samples = sampler.chain
 samples = samples[:, burn_in:, :].reshape((-1, ndim))
 
 # Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
-rp_i, a_i, b_i, u1_i, u2_i  = map(
+rp_i, a_i, b_i, q1_i, q2_i  = map(
 	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+
+
+# extract u1, u2
+#u1_i = 2*np.sqrt(q1_i)*q2_i
+#u2_i = np.sqrt(q1_i)*(1-2*q2_i)
 
 theta_percentiles = []
 theta_percentiles.append(rp_i)
 theta_percentiles.append(a_i)
 theta_percentiles.append(b_i)
-theta_percentiles.append(u1_i)
-theta_percentiles.append(u2_i)   
+theta_percentiles.append(q1_i)
+theta_percentiles.append(q2_i)   
  
 theta_max = []
 theta_max.append(rp_ml)
@@ -214,7 +235,7 @@ corn_fig = corner.corner(samples, labels=param_names)
 corn_fig.savefig(save_to + '/corner_folded_transit.png', bbox_inches='tight')
 
 
-fig, axes = plt.subplots(4, figsize=(10, 7), sharex=True)
+fig, axes = plt.subplots(5, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 labels = ["$rp$", "$a$", "$b$", "u1", "u2"]
 for i in range(ndim):
@@ -225,4 +246,4 @@ for i in range(ndim):
     ax.yaxis.set_label_coords(-0.1, 0.5)
 
 axes[-1].set_xlabel("step number");
-fig.savefig(save_to + '/random_walkers.png', bbox_inches='tight') 
+fig.savefig(save_to + '/random_walkers_a.png', bbox_inches='tight') 

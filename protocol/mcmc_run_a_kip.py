@@ -141,7 +141,7 @@ save_to = path + '/figures'
 final_fig.savefig(save_to + '/MCMCfit.png', bbox_inches='tight')
 
  
-
+'''
 # Priors
 def lnprior(theta):
 	rp, a, b, u1, u2 = theta
@@ -153,9 +153,18 @@ def lnprior(theta):
   and (0. <= u1+u2 < 1):
 		return 0
 	return -np.inf
+'''
 
-
-
+def lnprior(theta):
+  rp, a, b, u1, u2 = theta
+  if (0. < rp) \
+  and (0. <= a) \
+  and (0. <= b < a) \
+  and (0. < u1) \
+  and (0. < u1+2*u2) \
+  and (u1+u2 < 1):
+    return 0
+  return -np.inf
 
 # Define log of probability function.
 def lnprob(theta, x, y, sigma):
@@ -214,7 +223,7 @@ corn_fig = corner.corner(samples, labels=param_names)
 corn_fig.savefig(save_to + '/corner_folded_transit.png', bbox_inches='tight')
 
 
-fig, axes = plt.subplots(4, figsize=(10, 7), sharex=True)
+fig, axes = plt.subplots(5, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 labels = ["$rp$", "$a$", "$b$", "u1", "u2"]
 for i in range(ndim):

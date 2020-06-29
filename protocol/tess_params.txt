@@ -7,4 +7,4 @@
 --period=1.338231429
 --parent_dir=/Users/kate/Documents/USRP/TTP
 --path_to_data_file=/Users/kate/Documents/USRP/TTP/lc/wasp4_lc.fits
---refolded=True
+--refolded=False
