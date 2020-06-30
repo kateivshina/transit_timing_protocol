@@ -63,8 +63,7 @@ else:
 def lnlike(theta, x, y, sigma, per=per):
   r, a, b, u1, u2 = theta
   # From Claret et al. 2012/13
-  u1 = u1 # Limb Darkening coefficient 1
-  u2 = u2 # Limb Darkening coefficient 2
+ 
   # Set up transit parameters.
   params = batman.TransitParams()
   params.t0 = 0
@@ -147,7 +146,7 @@ def lnprior(theta):
 	rp, a, b, u1, u2 = theta
 	if (0. < rp) \
   and (0. <= a) \
-	and (0. <= b < a) \
+	and (0. <= b < 1+rp) \
   and (0. <= u1 < 1) \
   and (0. <= u2 < 1) \
   and (0. <= u1+u2 < 1):
