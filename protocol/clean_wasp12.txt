@@ -1,4 +1,0 @@
---mission=TESS
---planet=WASP 12b
---parent_dir=/Users/ivshina/Desktop/usrp/orbital_decay
---delete_arrs=11 21

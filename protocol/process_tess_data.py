@@ -19,6 +19,9 @@ parser.add_argument('--period')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
+parser.add_argument('--logg')
+parser.add_argument('--Teff')
+parser.add_argument('--Z')
 
 
 args = parser.parse_args()
@@ -56,7 +59,7 @@ if not os.path.isdir(path_to_data):
 
 
 
-def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux):
+def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux, path_to_figures):
     '''
     This function applies transit mask to TESS data to select individual transits 
     and stores fluxes and times of transits in .txt file
@@ -88,7 +91,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
     time_array = []
     time_folded_array = []
 
-    PATH_TO_FIGURES = path + '/individual_transits_figures'
+    PATH_TO_FIGURES = path_to_figures + '/individual_transits_figures'
     if os.path.isdir(PATH_TO_FIGURES) == False and transit == True:
         os.mkdir(PATH_TO_FIGURES)
    
@@ -105,7 +108,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 fig = plt.figure()
                 plt.plot(time_, data_, '.k')
                 plt.xlabel("Time [days]")
-                plt.ylabel("Relative flux [ppt]")
+                plt.ylabel("Relative flux")
                 plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
                 plt.close(fig)
 
@@ -141,7 +144,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
 #  Define a function to de-trend individual transits
 #################################################################
 
-def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux_masked):
+def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux_masked, path_to_figures):
     '''
     This function de-trends individual transits by fitting a polynomial of degree 1
     to the data points outside of each transit and dividing each transit's data by 
@@ -173,7 +176,7 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     stds = [] #list to store stds of fluxes
     corrected_flux = []
 
-    PATH_TO_FIGURES = path + '/transits_after_detrending'
+    PATH_TO_FIGURES = path_to_figures + '/transits_after_detrending'
     if os.path.isdir(PATH_TO_FIGURES) == False:
         os.mkdir(PATH_TO_FIGURES)
 
@@ -587,14 +590,14 @@ else:
 
 
 # save folded transits
-np.savetxt(path_to_data + '/transit/times.txt', times)
-np.savetxt(path_to_data + '/transit/flux.txt', flux_folded)
-np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
+#np.savetxt(path_to_data + '/transit/times.txt', times)
+#np.savetxt(path_to_data + '/transit/flux.txt', flux_folded)
+#np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
 
 # save masked transits
-np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
-np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
-np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
+#np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
+#np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
+#np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
 
 
 # transits
@@ -602,21 +605,24 @@ select_transits(True,
                 path_to_data + '/transit', 
                 path_to_data + '/transit/times.txt',
                 path_to_data + '/transit/time_folded.txt',
-                path_to_data + '/transit/flux.txt')
+                path_to_data + '/transit/flux.txt', 
+                path_to_fig)
 
 # out of transits
 select_transits(False,
                 path_to_data + '/transit_masked', 
                 path_to_data + '/transit_masked/time_masked.txt',
                 path_to_data + '/transit_masked/folded_time_masked.txt',
-                path_to_data + '/transit_masked/flux_masked.txt')
+                path_to_data + '/transit_masked/flux_masked.txt',
+                path_to_fig)
 
 
 detrend(path_to_data + '/transit', 
 		path_to_data + '/transit/individual_time_array.npy', 
 		path_to_data + '/transit/individual_flux_array.npy',
 		path_to_data + '/transit_masked/individual_time_array.npy',
-		path_to_data + '/transit_masked/individual_flux_array.npy')
+		path_to_data + '/transit_masked/individual_flux_array.npy',
+        path_to_fig)
 
 
  

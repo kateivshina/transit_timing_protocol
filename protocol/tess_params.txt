@@ -1,10 +1,13 @@
 --mission=TESS
---planet=WASP 4b
+--planet=WASP 19b
 --cadence=2
 --radius=0.12
 --semi_major_axis=5.299
 --b=0.15
---period=1.338231429
---parent_dir=/Users/kate/Documents/USRP/TTP
---path_to_data_file=/Users/kate/Documents/USRP/TTP/lc/wasp4_lc.fits
+--period=0.788
+--logg=4.45
+--Teff=5568
+--Z=-0.15 
+--parent_dir=/Users/kate/Documents/usrp/TTP
+--path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp19_lc.fits
 --refolded=True

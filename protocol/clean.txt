@@ -1,4 +1,4 @@
 --mission=TESS
---planet=WASP 4b
---parent_dir=/Users/kate/Documents/USRP/TTP
---delete_arrs=0 10
+--planet=WASP 19b
+--parent_dir=/Users/kate/Documents/usrp/TTP
+--delete_arrs=28
