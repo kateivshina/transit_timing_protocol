@@ -80,7 +80,7 @@ fig.update_layout(annotations=[
             xref="paper",
             yref="paper"),
         dict(
-            x=-0.1,
+            x=-0.12,
             y=0.5,
             showarrow=False,
             text="Depth",
