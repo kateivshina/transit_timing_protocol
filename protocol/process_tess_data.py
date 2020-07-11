@@ -55,7 +55,7 @@ if np.isnan(pl_trandur):
     v = (G*M/a)**0.5
     pl_trandur = (2*R/v)/86400 # transit duration in days
 
-pl_trandur = np.float64(pl_trandur)
+ 
 
 if not os.path.isdir(path):
     os.mkdir(path)
@@ -344,7 +344,24 @@ if int(cadence) == 2:
     time_folded = x_fold[m]
     times = time[m]
   
+    plt.figure(figsize=(10, 5))
+    arr1inds = time_folded.argsort()
+    sorted_arr1 = time_folded[arr1inds[::-1]]
+    sorted_arr2 = flux_folded[arr1inds[::-1]]
 
+ #   x_fold = (x - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
+ #   m = np.abs(x_fold) < 0.3
+ #   plt.plot(x_fold[m], pld_flux[m], ".k", ms=4)
+
+    bins = np.linspace(-0.5, 0.5, 60)
+    denom, _ = np.histogram(sorted_arr1, bins)
+    num, _ = np.histogram(sorted_arr1, bins, weights=sorted_arr2)
+    denom[num == 0] = 1.0
+    plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, '.k', color="C1", lw=2)
+    plt.xlim(-0.2, 0.2)
+    plt.xlabel("Time since transit")
+    plt.ylabel("Flux");
+    plt.show()
  
 
 else:
@@ -525,7 +542,7 @@ else:
     ax.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, color="C1")
 
     ax.set_xlim(-0.3, 0.3)
-    ax.set_ylabel("de-trended flux [ppt]")
+    ax.set_ylabel("flux")
     ax.set_xlabel("time since transit");
     plt.savefig(path_to_fig + '/de-trended_lc_of'+f'{planet_name.replace(" ", "_")}')
     #plt.show()

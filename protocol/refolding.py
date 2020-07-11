@@ -30,6 +30,7 @@ args = parser.parse_args()
 MISSION = args.mission
 planet_name = args.planet
 cadence = args.cadence
+N = float(args.N)
 path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
@@ -38,6 +39,31 @@ path = f'{parent_dir}' + f'/{directory}'
 path = path + '/data/transit/'
 
 bls_period = float(args.period)
+
+# load CSV file with the exoplanet data
+df = pd.read_csv('sampled_planets.csv')
+df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
+#print('df ', df)
+df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
+pl_trandur = df['pl_trandur'].iloc[0]
+
+G = 6.67e-10 # gravitational constant
+if np.isnan(pl_trandur):
+    # estimate transit duration
+    M = df['st_mass'].iloc[0] * 1.989e+30 # in kg
+    a = df['pl_orbsmax'].iloc[0] * 1.496e+11 # in meters
+    R = df['st_rad'].iloc[0] * 696.34 * 10e6 # in meters
+    if np.isnan(M) or np.isnan(a) or np.isnan(R):
+        print('Could not estimate transit duration')
+        sys.exit(0)
+
+    v = (G*M/a)**0.5
+    pl_trandur = (2*R/v)/86400 # transit duration in days
+
+ 
+
+
+
 
 t0_k_b = np.loadtxt(path + '/t0_k_b.txt')
 t0s = t0_k_b[:,0] # mid-transit times
@@ -64,8 +90,8 @@ for i in range(flux.shape[0]):
 
 	# create transit mask
 	x_fold = (time_i - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
-	m = np.abs(x_fold) <= 0.4
-	transit_mask = bls.transit_mask(time_i, bls_period, 0.2, bls_t0)
+	m = np.abs(x_fold) < N*pl_trandur
+    transit_mask =  np.abs(x_fold) < 0.6*pl_trandur
 	not_transit = ~transit_mask
 	# folded data with transit masked:
 	total_mask = m & not_transit

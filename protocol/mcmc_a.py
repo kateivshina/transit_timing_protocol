@@ -132,8 +132,8 @@ sigma = np.mean(stds, axis=0)
 
 flux =  np.concatenate(flux, axis=0)
 time =  np.concatenate(time, axis=0)
-
-
+print('u1 i ', u1_i)
+print('u2 i ', u2_i)
 # MCMC parameters
 nsteps = 5000 
 burn_in = 2000
@@ -141,7 +141,7 @@ ndim = 5
 nwalkers = 100
 
 nll = lambda *args: -lnlike(*args)
-initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) + 1e-5*np.random.randn(ndim)
+initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) #+ 1e-5*np.random.randn(ndim)
 soln = minimize(nll, initial, args=(time, flux, sigma))
 rp_ml, a_ml, b_ml, u1_ml, u2_ml = soln.x
 
@@ -150,19 +150,27 @@ print("rp = {0:.3f}".format(rp_ml))
 print("a = {0:.3f}".format(a_ml))
 print("b = {0:.3f}".format(b_ml))
 print("u1 = {0:.3f}".format(u1_ml))
-
+print("u2 = {0:.3f}".format(u2_ml))
 yerr = np.full((time.shape[0]), sigma) 
 
+
 # Overplot the phase binned light curve
-#bins = np.linspace(np.min(time), np.max(time), 10)
+bins = np.linspace(np.min(time), np.max(time), 200)
+
+arr1inds = time.argsort()
+sorted_arr1 = time[arr1inds[::-1]]
+sorted_arr2 = flux[arr1inds[::-1]]
 #bins = np.linspace(-0.4, 0.4, 10)
 #print('bins ', bins)
-#denom, _ = np.histogram(flux, bins)
-#num, _ = np.histogram(time, bins, weights=flux)
-#denom[num == 0] = 1.0
-#print('flux ', flux)
-#num, _ = np.histogram(flux, bins, weights=flux)
+denom, _ = np.histogram(sorted_arr1, bins)
+num, _ = np.histogram(sorted_arr1, bins, weights=sorted_arr2)
+denom[num == 0] = 1.0
+#plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, '.k', color="C1", lw=2)
+#plt.xlabel("Time since transit")
+#plt.ylabel("Flux");
+#plt.show()
  
+yerr = np.full((num.shape[0]), sigma)  
 #fig, ax = plt.subplots()
 #ax.plot(0.5 * (bins[1:] + bins[:-1]), num , color="C1")
 
@@ -190,7 +198,8 @@ m = batman.TransitModel(params_final, tl)
 f_final = m.light_curve(params_final)
 final_fig, ax = plt.subplots(figsize=(10,8))
 ax.set_title(planet_name)
-ax.errorbar(time,flux,yerr=yerr,fmt='.k',capsize=0,alpha=0.4,zorder=1)
+#ax.errorbar(time,flux,yerr=yerr,fmt='.k',capsize=0,alpha=0.4,zorder=1)
+ax.errorbar(0.5 * (bins[1:] + bins[:-1]), num / denom, yerr = yerr, fmt = '.k', color="C1", lw=1)
 #ax.plot(time, flux, 'k.',alpha=0.8,lw=3,zorder=2)
 ax.plot(tl, f_final, 'r-',alpha=0.8,lw=3,zorder=2)
 ax.set_xlabel("Time")
