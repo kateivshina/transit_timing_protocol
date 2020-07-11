@@ -23,19 +23,19 @@ cd transit_timing_protocols/
 
 1. In tess_params.txt file, specify the parameters of the planetary system as well as where to store the output data.
 
---mission=TESS # name of the mission
---planet=WASP 4b # name of the planet
---cadence=2  # cadence of data (2 or 30 mins) 
---radius=0.12 # planet radius in stellar radii
---semi_major_axis=5.299 # orbit's semi-major axis in stellar radii
---b=0.15 # impact parameter
---period=1.338231429 # planet's period
---logg=4.484 # host star's surface gravity
---Teff=5436 # host star's effective temperature
---Z=-0.05 # host star'smetallicity
---parent_dir=/Users/kate/Documents/usrp/TTP
---path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp4_lc.fits
---refolded=False
+- --mission=TESS # name of the mission
+- --planet=WASP 4b # name of the planet
+- --cadence=2  # cadence of data (2 or 30 mins) 
+- --radius=0.12 # planet radius in stellar radii
+- --semi_major_axis=5.299 # orbit's semi-major axis in stellar radii
+- --b=0.15 # impact parameter
+- --period=1.338231429 # planet's period
+- --logg=4.484 # host star's surface gravity
+- --Teff=5436 # host star's effective temperature
+- --Z=-0.05 # host star'smetallicity
+- --parent_dir=/Users/kate/Documents/usrp/TTP
+- --path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp4_lc.fits
+- --refolded=False
 
 2. To preprocess the data, run in the terminal:
 
@@ -64,16 +64,16 @@ It will create the following files in the output directory:
 This script will also generate figures of transits in the ~/figures/individual_transits_figures folder as well as figures of de-trended transits in the ~/figures/transits_after_detrending folder.
 
 
-3. In the ~*/figures/individual_transits_figures folder, check the found transits and note indices of events that were accidentally selected as transits
+3. In the ~/figures/individual_transits_figures folder, check the found transits and note indices of events that were accidentally selected as transits
 
 Put these indices into ~/clean.txt file as the --delete_arrs argument.
 
 ***Example:***
 
---mission=TESS
---planet=WASP 4b
---parent_dir=/Users/kate/Documents/usrp/TTP
---delete_arrs=0 10
+- --mission=TESS
+- --planet=WASP 4b
+- --parent_dir=/Users/kate/Documents/usrp/TTP
+- --delete_arrs=0 10
 
 Then, to remove these events, run 
 
