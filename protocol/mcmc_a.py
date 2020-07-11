@@ -205,6 +205,8 @@ ax.plot(tl, f_final, 'r-',alpha=0.8,lw=3,zorder=2)
 ax.set_xlabel("Time")
 ax.set_ylabel("Relative Flux")
 ax.legend(('BATMAN','TESS'), loc=2)
+save_to = path + '/figures'
+final_fig.savefig(save_to + f'/binned_lc.png', bbox_inches='tight')
 plt.show()
      
 
