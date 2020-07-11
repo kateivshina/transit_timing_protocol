@@ -4,24 +4,21 @@ import matplotlib.pyplot as plt
 from astropy.timeseries import BoxLeastSquares
 from scipy.signal import savgol_filter
 import exoplanet as xo
+import pandas as pd
 import os
+import sys
 from argparse import ArgumentParser
 
-# parse data about the planet
+# parse input data
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
-parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--semi_major_axis')
-parser.add_argument('--b')
-parser.add_argument('--period')
+parser.add_argument('--N')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
-parser.add_argument('--logg')
-parser.add_argument('--Teff')
-parser.add_argument('--Z')
 
 
 args = parser.parse_args()
@@ -29,13 +26,36 @@ args = parser.parse_args()
 
  
 MISSION = args.mission
-planet_name = args.planet
+planet_name = args.pl_hostname + args.pl_letter
 cadence = args.cadence
+N = float(args.N)
 path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
 path = f'{parent_dir}' + f'/{directory}'  
+
+# load CSV file with the exoplanet data
+df = pd.read_csv('sampled_planets.csv')
+df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
+#print('df ', df)
+df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
+pl_trandur = df['pl_trandur'].iloc[0]
+
+G = 6.67e-10 # gravitational constant
+if np.isnan(pl_trandur):
+    # estimate transit duration
+    M = df['st_mass'].iloc[0] * 1.989e+30 # in kg
+    a = df['pl_orbsmax'].iloc[0] * 1.496e+11 # in meters
+    R = df['st_rad'].iloc[0] * 696.34 * 10e6 # in meters
+    if np.isnan(M) or np.isnan(a) or np.isnan(R):
+        print('Could not estimate transit duration')
+        sys.exit(0)
+
+    v = (G*M/a)**0.5
+    pl_trandur = (2*R/v)/86400 # transit duration in days
+
+pl_trandur = np.float64(pl_trandur)
 
 if not os.path.isdir(path):
     os.mkdir(path)
@@ -43,8 +63,6 @@ if not os.path.isdir(path +'/figures'):
     os.mkdir(path +'/figures')
 
 path_to_fig = path +'/figures'
-
-
 path_to_data = path + '/data'
 
 if not os.path.isdir(path_to_data):
@@ -54,10 +72,6 @@ if not os.path.isdir(path_to_data):
 
 
 #################################################################
-# Define a function to select individual transits
-#################################################################
-
-
 
 def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux, path_to_figures):
     '''
@@ -124,7 +138,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 fig = plt.figure()
                 plt.plot(time_, data_, '.k')
                 plt.xlabel("Time [days]")
-                plt.ylabel("Relative flux [ppt]")
+                plt.ylabel("Relative flux")
                 plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
                 plt.close(fig)
     
@@ -140,8 +154,6 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
 
 
 
-#################################################################
-#  Define a function to de-trend individual transits
 #################################################################
 
 def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux_masked, path_to_figures):
@@ -180,9 +192,13 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     if os.path.isdir(PATH_TO_FIGURES) == False:
         os.mkdir(PATH_TO_FIGURES)
 
-    PATH_TO_FIT = path + '/fits'
+    PATH_TO_FIT = path_to_figures + '/fits'
     if os.path.isdir(PATH_TO_FIT) == False:
         os.mkdir(PATH_TO_FIT)
+
+    PATH_TO_RESIDUALS = path_to_figures + '/residuals'
+    if os.path.isdir(PATH_TO_RESIDUALS) == False:
+        os.mkdir(PATH_TO_RESIDUALS)
 
     coeffs = []
   
@@ -213,12 +229,20 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         plt.savefig(PATH_TO_FIT + f'/transit_{i}')
         plt.close(fig)
 
-        fig = plt.figure()
+        fig1 = plt.figure()
         plt.plot(time_i, corrected_flux_i, '.k')
         plt.xlabel("Time [days]")
-        plt.ylabel("Relative flux [ppt]")
+        plt.ylabel("Relative flux")
         plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
-        plt.close(fig)
+        plt.close(fig1)
+
+        fig2 = plt.figure()
+        residuals = flux_i - fit
+        plt.plot(time_i, residuals, '.k')
+        plt.xlabel("Time [days]")
+        plt.ylabel("Residuals")
+        plt.savefig(PATH_TO_RESIDUALS + f'/transit_{i}')
+        plt.close(fig2)
         
     corrected_flux = np.array(corrected_flux, dtype=object, copy=False)
 
@@ -234,9 +258,6 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 # Read fits file
 #################################################################
 
- 
- 
-
 if int(cadence) == 2:
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
         tess_bjds = hdulist[1].data['TIME']
@@ -251,7 +272,7 @@ if int(cadence) == 2:
     ax.plot(tess_bjds, pdcsap_fluxes, '.k')
     plt.xlabel('Time')
     plt.ylabel('Flux')
-    plt.savefig(path_to_fig + '/lc_'+f'{ planet_name.replace(" ", "_")}')
+    plt.savefig(path_to_fig + '/lc_'+f'{planet_name.replace(" ", "_")}')
     plt.close(fig)
 
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
@@ -291,24 +312,26 @@ if int(cadence) == 2:
 
     bls = BoxLeastSquares(time, pdcsap_fluxes)
     bls_power = bls.power(period_grid, 0.02, oversample=20)
-    plt.xlabel("time [days]")
-    plt.ylabel("de-trended flux [ppt]")
-
+ 
     # Save the highest peak as the planet candidate
     index = np.argmax(bls_power.power)
     bls_period = bls_power.period[index]
     bls_t0 = bls_power.transit_time[index]
     bls_depth = bls_power.depth[index]
-    transit_mask = bls.transit_mask(time, bls_period, 0.2, bls_t0)
+    transit_mask = bls.transit_mask(time, bls_period, 0.6*pl_trandur, bls_t0)
 
 
     x = np.ascontiguousarray(time, dtype=np.float64)
     y = np.ascontiguousarray(pdcsap_fluxes, dtype=np.float64) 
+
+
      
     # Plot the folded transit
-    #ax = axes[1]
+     
     x_fold = (time - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
-    m = np.abs(x_fold) < 0.4
+
+    m = np.abs(x_fold) < N*pl_trandur
+    transit_mask =  np.abs(x_fold) < 0.6*pl_trandur
     not_transit = ~transit_mask
 
     # folded data with transit masked:
@@ -322,20 +345,7 @@ if int(cadence) == 2:
     times = time[m]
   
 
-
-    # Plot the folded transit
-     
-    #####################################################################
-    #plot
-    #####################################################################
-    #figure = plt.figure()
-    #plt.plot(x_fold[m], pdcsap_fluxes[m], ".k")
  
-    #plt.ylabel("de-trended flux")
-    #plt.xlabel("time since transit");
-    #plt.show()
-
-
 
 else:
     with fits.open(path_to_data_file, mode="readonly") as hdu: 
@@ -590,14 +600,14 @@ else:
 
 
 # save folded transits
-#np.savetxt(path_to_data + '/transit/times.txt', times)
-#np.savetxt(path_to_data + '/transit/flux.txt', flux_folded)
-#np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
+np.savetxt(path_to_data + '/transit/times.txt', times)
+np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
+np.savetxt(path_to_data + '/transit/flux.txt', flux_folded)
 
 # save masked transits
-#np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
-#np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
-#np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
+np.savetxt(path_to_data + '/transit_masked/folded_time_masked.txt', time_masked)
+np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
+np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
 
 
 # transits

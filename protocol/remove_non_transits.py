@@ -4,14 +4,15 @@ from argparse import ArgumentParser
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--parent_dir')
 parser.add_argument('--delete_arrs', nargs='*')
 
 args = parser.parse_args()
  
 # Path 
-planet_name = args.planet
+planet_name = args.pl_hostname + args.pl_letter
 parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
 path = f'{parent_dir}' + f'/{directory}'  

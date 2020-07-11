@@ -17,18 +17,14 @@ sys.setdlopenflags(sys.getdlopenflags() ^ RTLD_GLOBAL)
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
-parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--semi_major_axis')
-parser.add_argument('--b')
-parser.add_argument('--period')
+parser.add_argument('--N')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
-parser.add_argument('--logg')
-parser.add_argument('--Teff')
-parser.add_argument('--Z')
+
 
 args = parser.parse_args()
 
@@ -36,7 +32,8 @@ args = parser.parse_args()
 # path info
 MISSION = args.mission
 cadence = args.cadence
-planet_name = args.planet
+
+planet_name = args.pl_hostname + args.pl_letter
 path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
@@ -53,7 +50,13 @@ if not os.path.isdir(path_to_figs):
 action = args.refolded
 
 # Planet info
-per = float(args.period)
+# load CSV file with the exoplanet data
+df = pd.read_csv('sampled_planets.csv')
+df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
+df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
+per = df['pl_orbper'].iloc[0]
+
+
 theta = np.loadtxt(path + '/data/transit/theta_max.txt')
 
 if action == 'True':
@@ -85,7 +88,7 @@ nwalkers = 100
 
 # Priors
 def lnprior(theta):
-  t0, k, c  = theta
+  t0, k, c = theta
   if True:
     return 0
   return -np.inf

@@ -10,22 +10,19 @@ import time as timing
 from argparse import ArgumentParser
 from scipy.optimize import minimize
 from sklearn.metrics.pairwise import euclidean_distances
+import sys
 
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
-parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--semi_major_axis')
-parser.add_argument('--b')
-parser.add_argument('--period')
+parser.add_argument('--N')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
-parser.add_argument('--logg')
-parser.add_argument('--Teff')
-parser.add_argument('--Z')
+
 
 args = parser.parse_args()
 
@@ -37,22 +34,33 @@ action = args.refolded
 # path info
 MISSION = args.mission
 cadence = args.cadence
-planet_name = args.planet
+planet_name = args.pl_hostname + args.pl_letter
 path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
 directory = planet_name.replace(" ", "_") 
 path = f'{parent_dir}' + f'/{directory}'  
 path2table = parent_dir + '/LD.csv'
-logg = args.logg
-Teff = args.Teff
-Z = args.Z
+
+# load CSV file with the exoplanet data
+df = pd.read_csv('sampled_planets.csv')
+df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
+df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
+pl_trandur = df['st_teff'].iloc[0]
 
 
-# change this to the derived values
-# planet info
-per = float(args.period)
+logg = df['st_logg'].iloc[0]
+Teff = df['st_teff'].iloc[0]
+Z = df['st_metfe'].iloc[0]
+per = df['pl_orbper'].iloc[0]
 
+
+
+if np.isnan(logg) or np.isnan(Teff) or np.isnan(Z) or np.isnan(per) :
+  print('Could not find logg or Teff or Z or period')
+  sys.exit(0)
+
+ 
 def match(g, t, z, path2table):
   table = pd.read_csv(path2table, delimiter=',')
   arr = np.array([g, t, z]).reshape([1,3])
@@ -69,6 +77,7 @@ def match(g, t, z, path2table):
   return closest_u1, closest_u2
 
 
+
 if action == 'True':
   flux = np.load(path + '/data/transit/corrected_flux_refolded.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean_refolded.npy', allow_pickle=True) 
@@ -81,9 +90,16 @@ else:
   stds = np.load(path + '/data/transit/stds_clean.npy', allow_pickle = True)
   u1_i, u2_i  = match(logg, Teff, Z, path2table) 
 
-  rp_i = float(args.radius) # Rp/R* (planet's radius in terms of stellar radii)
-  a_i = float(args.semi_major_axis) #(semi-major axis in terms of stellar radii)
-  b_i = float(args.b) # impact parameter
+  rp_i = df['pl_radj'].iloc[0] * 0.10049 # planet's radius in solar radii
+  R_star = df['st_rad'].iloc[0] # star's radius in solar radii
+  rp_i = rp_i/R_star # Rp/R* (planet's radius in terms of stellar radii)
+  a_i = df['pl_orbsmax'].iloc[0] * 215.032 / R_star #(semi-major axis in terms of stellar radii)
+  inclination =  df['pl_orbincl'].iloc[0] 
+  b_i = a_i * np.cos(np.radians(inclination))
+
+  if np.isnan(rp_i) or np.isnan(R_star) or np.isnan(a_i) or np.isnan(inclination) :
+    print('Could not find the radius of the planet or stellar radius or semi-major axis or inclination')
+    sys.exit(0)
 
 
 def lnlike(theta, x, y, sigma, per=per):
@@ -202,7 +218,7 @@ final_fig.savefig(save_to + f'/residuals_{action}.png', bbox_inches='tight')
 
  
 
-def lnprior(theta):
+def lnprior(theta, u1_0, u2_0):
   rp, a, b, u1, u2 = theta
   if (0. < rp) \
   and (0. <= a) \
@@ -210,27 +226,28 @@ def lnprior(theta):
   and (0. < u1) \
   and (0. < u1+2*u2) \
   and (u1+u2 < 1):
-    return 0
+    return -100*((u1-u1_0)**2)*(u2-u2_0)**2
   return -np.inf
 
 # Define log of probability function.
-def lnprob(theta, x, y, sigma):
-  lp = lnprior(theta)
+def lnprob(theta, x, y, sigma, u1_0, u2_0):
+  lp = lnprior(theta, u1_0, u2_0)
   if not np.isfinite(lp):
     return -np.inf
   return lp + lnlike(theta, x, y, sigma)
 
 
+u1_0, u2_0  = match(logg, Teff, Z, path2table) 
 
 initial_params = rp_i, a_i, b_i, u1_i, u2_i 
-
 # Initialize walkers around maximum likelihood.
 pos = [initial_params + 1e-1*np.random.randn(ndim) for i in range(nwalkers)]
 
-t0 = timing.time()
 
-# Set up sampler.
-sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, flux, sigma))
+
+# Set up sampler
+t0 = timing.time()
+sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, flux, sigma, u1_0, u2_0))
 # Run MCMC for n steps and display progress bar.
 width = 50
 for m, result in enumerate(sampler.sample(pos, iterations=nsteps)):

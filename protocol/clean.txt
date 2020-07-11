@@ -1,4 +1,5 @@
 --mission=TESS
---planet=WASP 19b
+--pl_hostname=WASP 19
+--pl_letter=b
 --parent_dir=/Users/kate/Documents/usrp/TTP
 --delete_arrs=28
