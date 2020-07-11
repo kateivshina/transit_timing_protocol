@@ -63,13 +63,8 @@ It will create the following files in the output directory:
 
 This script will also generate figures of transits in the ~/figures/individual_transits_figures folder as well as figures of de-trended transits in the ~/figures/transits_after_detrending folder.
 
-***Example:***
 
-![TTP%207372d86611574ee48ee1c8039674d15a/transit_0.png](TTP%207372d86611574ee48ee1c8039674d15a/transit_0.png)
-
-3. In the ~*/figures/individual_transits_figures folder, check the found transits and note indices of events that were accidentally selected as transits, e.g.*
-
-![TTP%207372d86611574ee48ee1c8039674d15a/transit_21.png](TTP%207372d86611574ee48ee1c8039674d15a/transit_21.png)
+3. In the ~*/figures/individual_transits_figures folder, check the found transits and note indices of events that were accidentally selected as transits
 
 Put these indices into ~/clean.txt file as the --delete_arrs argument.
 
