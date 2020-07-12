@@ -84,6 +84,7 @@ if action == 'True':
   stds = np.load(path + '/data/transit/stds_refolded.npy', allow_pickle = True)
   theta = np.loadtxt(path + '/data/transit/theta_max.txt')
   rp_i, a_i, b_i, u1_i, u2_i  = theta[0], theta[1], theta[2], theta[3], theta[4]
+
 else:
   flux = np.load(path + '/data/transit/corrected_flux_clean.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean.npy', allow_pickle=True) 
@@ -104,9 +105,6 @@ else:
 
 def lnlike(theta, x, y, sigma, per=per):
   r, a, b, u1, u2 = theta
-  # From Claret et al. 2012/13
-  u1 = u1 # Limb Darkening coefficient 1
-  u2 = u2 # Limb Darkening coefficient 2
   # Set up transit parameters.
   params = batman.TransitParams()
   params.t0 = 0
@@ -122,18 +120,21 @@ def lnlike(theta, x, y, sigma, per=per):
   m_init = batman.TransitModel(params, x)
   model = m_init.light_curve(params)  
   inv_sigma2 = 1.0 / (sigma**2)
-  return -0.5*(np.sum((y-model)**2*inv_sigma2))
+  if u1 < 0 or 0. > u1+2*u2 or 0. > r or 0. > a or a < b <= 0  or  u1+u2 > 1:
+    return -np.inf
+  else:
+    return -0.5*(np.sum((y-model)**2*inv_sigma2))
   
  
 
-
+print('u1 ', u1_i)
+print('u2 ', u2_i)
 sigma = np.mean(stds, axis=0)
 
 
 flux =  np.concatenate(flux, axis=0)
 time =  np.concatenate(time, axis=0)
-print('u1 i ', u1_i)
-print('u2 i ', u2_i)
+
 # MCMC parameters
 nsteps = 5000 
 burn_in = 2000
@@ -141,9 +142,19 @@ ndim = 5
 nwalkers = 100
 
 nll = lambda *args: -lnlike(*args)
-initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) #+ 1e-5*np.random.randn(ndim)
+initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) #+ 1e-1*np.random.randn(ndim)
 soln = minimize(nll, initial, args=(time, flux, sigma))
 rp_ml, a_ml, b_ml, u1_ml, u2_ml = soln.x
+
+theta_max = []
+theta_max.append(rp_ml)
+theta_max.append(a_ml)
+theta_max.append(b_ml)
+theta_max.append(u1_ml)   
+theta_max.append(u2_ml) 
+# save rp, a, b, u1, u2 
+np.savetxt(path + '/data/transit/theta_max.txt', theta_max)
+
 
 print("Maximum likelihood estimates:")
 print("rp = {0:.3f}".format(rp_ml))
@@ -206,7 +217,7 @@ ax.set_xlabel("Time")
 ax.set_ylabel("Relative Flux")
 ax.legend(('BATMAN','TESS'), loc=2)
 save_to = path + '/figures'
-final_fig.savefig(save_to + f'/binned_lc.png', bbox_inches='tight')
+final_fig.savefig(save_to + f'/binned_lc_{action}.png', bbox_inches='tight')
 plt.show()
      
 
@@ -285,16 +296,8 @@ theta_percentiles.append(a_i)
 theta_percentiles.append(b_i)
 theta_percentiles.append(u1_i)
 theta_percentiles.append(u2_i)   
- 
-theta_max = []
-theta_max.append(rp_ml)
-theta_max.append(a_ml)
-theta_max.append(b_ml)
-theta_max.append(u1_ml)   
-theta_max.append(u2_ml) 
-# save rp, a, b, u1, u2 
-np.savetxt(path + '/data/transit/theta_max.txt', theta_max)
-np.savetxt(path + '/data/transit/theta_percentiles.txt', theta_percentiles)
+np.savetxt(path + '/data/transit/theta_percentiles.txt', theta_percentiles) 
+
 
 #samples = sampler.flatchain
 

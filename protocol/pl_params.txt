@@ -5,4 +5,4 @@
 --N=3
 --parent_dir=/Users/kate/Documents/usrp/TTP
 --path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp19_lc.fits
---refolded=False
+--refolded=True

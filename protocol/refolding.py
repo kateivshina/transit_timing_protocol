@@ -5,30 +5,27 @@ from astropy.timeseries import BoxLeastSquares
 from scipy.signal import savgol_filter
 import exoplanet as xo
 import os
+import pandas as pd
 from argparse import ArgumentParser
 
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
-parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--semi_major_axis')
-parser.add_argument('--b')
-parser.add_argument('--period')
+parser.add_argument('--N')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
-parser.add_argument('--logg')
-parser.add_argument('--Teff')
-parser.add_argument('--Z')
+
 
 
 args = parser.parse_args()
 
 
 MISSION = args.mission
-planet_name = args.planet
+planet_name = args.pl_hostname + args.pl_letter
 cadence = args.cadence
 N = float(args.N)
 path_to_data_file =args.path_to_data_file
@@ -38,7 +35,7 @@ directory = planet_name.replace(" ", "_")
 path = f'{parent_dir}' + f'/{directory}'  
 path = path + '/data/transit/'
 
-bls_period = float(args.period)
+
 
 # load CSV file with the exoplanet data
 df = pd.read_csv('sampled_planets.csv')
@@ -46,6 +43,11 @@ df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
 #print('df ', df)
 df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
 pl_trandur = df['pl_trandur'].iloc[0]
+
+
+bls_period = df['pl_orbper'].iloc[0]
+
+
 
 G = 6.67e-10 # gravitational constant
 if np.isnan(pl_trandur):
@@ -91,7 +93,7 @@ for i in range(flux.shape[0]):
 	# create transit mask
 	x_fold = (time_i - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
 	m = np.abs(x_fold) < N*pl_trandur
-    transit_mask =  np.abs(x_fold) < 0.6*pl_trandur
+	transit_mask =  np.abs(x_fold) < 0.6*pl_trandur
 	not_transit = ~transit_mask
 	# folded data with transit masked:
 	total_mask = m & not_transit
