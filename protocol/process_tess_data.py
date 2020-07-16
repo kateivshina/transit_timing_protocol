@@ -2,6 +2,7 @@ import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from astropy.timeseries import BoxLeastSquares
+import matplotlib.backends.backend_pdf
 from scipy.signal import savgol_filter
 import exoplanet as xo
 import pandas as pd
@@ -16,6 +17,7 @@ parser.add_argument('--pl_hostname')
 parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
 parser.add_argument('--N')
+parser.add_argument('--degree')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
@@ -29,6 +31,7 @@ MISSION = args.mission
 planet_name = args.pl_hostname + args.pl_letter
 cadence = args.cadence
 N = float(args.N)
+degree = int(args.degree)
 path_to_data_file =args.path_to_data_file
 # Path 
 parent_dir = args.parent_dir
@@ -36,7 +39,7 @@ directory = planet_name.replace(" ", "_")
 path = f'{parent_dir}' + f'/{directory}'  
 
 # load CSV file with the exoplanet data
-df = pd.read_csv('sampled_planets.csv')
+df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv')
 df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
 #print('df ', df)
 df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
@@ -140,6 +143,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 plt.xlabel("Time [days]")
                 plt.ylabel("Relative flux")
                 plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
+                pdf.savefig(fig)
                 plt.close(fig)
     
     flux_array = np.array(flux_array, dtype=object, copy=False)
@@ -209,13 +213,22 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         time_i_out = time_masked[i]
         flux_i = flux[i]
         time_i = time[i]  
+
         # find the best linear fit
-        k, b = np.polyfit(time_i_out, flux_i_out, deg=1)
-        fit = k*time_i+b
+        if degree == 1:
+            k, b = np.polyfit(time_i_out, flux_i_out, deg=1)
+            fit = k*time_i+b
+        else:
+            a, b, c = np.polyfit(time_i_out, flux_i_out, deg=2)
+            fit = a * time_i * time_i + b * time_i + c
+
+
         # divide the data by the best fit
         corrected_flux_i = flux_i/fit
+        
         # fit for the points outside of transit
         fit_out = k*time_i_out+b 
+
         y = flux_i_out/fit_out
         # append the data to list
         corrected_flux.append(corrected_flux_i)
@@ -227,6 +240,7 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         plt.plot(time_i, fit, 'r')
         plt.plot(time_i, flux_i, '.b')
         plt.savefig(PATH_TO_FIT + f'/transit_{i}')
+        pdf.savefig(fig)
         plt.close(fig)
 
         fig1 = plt.figure()
@@ -259,6 +273,9 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 #################################################################
 
 if int(cadence) == 2:
+    out_pdf = '/Users/kate/Desktop/1.pdf'
+    pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
+    figs = plt.figure()
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
         tess_bjds = hdulist[1].data['TIME']
         sap_fluxes = hdulist[1].data['SAP_FLUX']
@@ -273,6 +290,7 @@ if int(cadence) == 2:
     plt.xlabel('Time')
     plt.ylabel('Flux')
     plt.savefig(path_to_fig + '/lc_'+f'{planet_name.replace(" ", "_")}')
+    pdf.savefig(fig)
     plt.close(fig)
 
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
@@ -287,6 +305,7 @@ if int(cadence) == 2:
     # Add a title to the plot.
     fig.suptitle("Aperture")
     plt.savefig(path_to_fig + '/selected_aperture'+f'{ planet_name.replace(" ", "_")}')
+    pdf.savefig(fig)
 
 
 
@@ -294,6 +313,7 @@ if int(cadence) == 2:
 
     m = np.isfinite(pdcsap_fluxes)
     time = np.ascontiguousarray(time[m])
+
     pdcsap_fluxes = np.ascontiguousarray(pdcsap_fluxes[m])
 
     ##############################################
@@ -331,7 +351,7 @@ if int(cadence) == 2:
     x_fold = (time - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
 
     m = np.abs(x_fold) < N*pl_trandur
-    transit_mask =  np.abs(x_fold) < 0.6*pl_trandur
+    transit_mask =  np.abs(x_fold) < 0.3*pl_trandur
     not_transit = ~transit_mask
 
     # folded data with transit masked:
@@ -343,25 +363,17 @@ if int(cadence) == 2:
     flux_folded = pdcsap_fluxes[m]
     time_folded = x_fold[m]
     times = time[m]
-  
-    plt.figure(figsize=(10, 5))
-    arr1inds = time_folded.argsort()
-    sorted_arr1 = time_folded[arr1inds[::-1]]
-    sorted_arr2 = flux_folded[arr1inds[::-1]]
 
- #   x_fold = (x - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
- #   m = np.abs(x_fold) < 0.3
- #   plt.plot(x_fold[m], pld_flux[m], ".k", ms=4)
+    fig, ax = plt.subplots()
 
-    bins = np.linspace(-0.5, 0.5, 60)
-    denom, _ = np.histogram(sorted_arr1, bins)
-    num, _ = np.histogram(sorted_arr1, bins, weights=sorted_arr2)
-    denom[num == 0] = 1.0
-    plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, '.k', color="C1", lw=2)
-    plt.xlim(-0.2, 0.2)
-    plt.xlabel("Time since transit")
-    plt.ylabel("Flux");
-    plt.show()
+    # Plot the timeseries in black circles.
+    ax.plot(x, y, '.k', markersize=1)
+    ax.plot(x[transit_mask], y[transit_mask], '.r', markersize=1)
+    plt.xlabel('Time')
+    plt.ylabel('Flux')
+    plt.savefig(path_to_fig + '/lc_w_transits_selected'+f'{planet_name.replace(" ", "_")}')
+    pdf.savefig(fig)
+    plt.close(fig)
  
 
 else:
@@ -419,12 +431,12 @@ else:
     pix_mask = masks[np.argmin(scatters)]
      
     # Plot the selected aperture
-    plt.imshow(mean_img.T, cmap="gray_r")
+    #plt.imshow(mean_img.T, cmap="gray_r")
     plt.imshow(pix_mask.T, cmap="Reds", alpha=0.3)
     plt.title("selected aperture")
     plt.xticks([])
     plt.yticks([]);
-    plt.savefig(path_to_fig + '/selected_aperture'+f'{ planet_name.replace(" ", "_")}')
+    plt.savefig(path_to_fig + '/selected_aperture_'+f'{planet_name.replace(" ", "_")}')
     #plt.show()
 
 
@@ -616,6 +628,7 @@ else:
 
 
 
+
 # save folded transits
 np.savetxt(path_to_data + '/transit/times.txt', times)
 np.savetxt(path_to_data + '/transit/time_folded.txt', time_folded)
@@ -651,6 +664,6 @@ detrend(path_to_data + '/transit',
 		path_to_data + '/transit_masked/individual_flux_array.npy',
         path_to_fig)
 
-
+pdf.close()
  
  

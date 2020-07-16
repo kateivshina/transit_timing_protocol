@@ -10,7 +10,11 @@ import time as timing
 from argparse import ArgumentParser
 from scipy.optimize import minimize
 from sklearn.metrics.pairwise import euclidean_distances
+import matplotlib.backends.backend_pdf
 import sys
+
+
+
 
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
@@ -19,6 +23,7 @@ parser.add_argument('--pl_hostname')
 parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
 parser.add_argument('--N')
+parser.add_argument('--degree')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
@@ -43,7 +48,7 @@ path = f'{parent_dir}' + f'/{directory}'
 path2table = parent_dir + '/LD.csv'
 
 # load CSV file with the exoplanet data
-df = pd.read_csv('sampled_planets.csv')
+df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv')
 df = df.loc[df['pl_hostname'] == f'{args.pl_hostname.replace(" ", "-")}']
 df = df.loc[df['pl_letter'] == f'{args.pl_letter}']
 pl_trandur = df['st_teff'].iloc[0]
@@ -79,6 +84,8 @@ def match(g, t, z, path2table):
 
 
 if action == 'True':
+  out_pdf = '/Users/kate/Desktop/2_refolded.pdf'
+  pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
   flux = np.load(path + '/data/transit/corrected_flux_refolded.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean_refolded.npy', allow_pickle=True) 
   stds = np.load(path + '/data/transit/stds_refolded.npy', allow_pickle = True)
@@ -86,6 +93,8 @@ if action == 'True':
   rp_i, a_i, b_i, u1_i, u2_i  = theta[0], theta[1], theta[2], theta[3], theta[4]
 
 else:
+  out_pdf = '/Users/kate/Desktop/2.pdf'
+  pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
   flux = np.load(path + '/data/transit/corrected_flux_clean.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean.npy', allow_pickle=True) 
   stds = np.load(path + '/data/transit/stds_clean.npy', allow_pickle = True)
@@ -99,11 +108,31 @@ else:
   b_i = a_i * np.cos(np.radians(inclination))
 
   if np.isnan(rp_i) or np.isnan(R_star) or np.isnan(a_i) or np.isnan(inclination) :
-    print('Could not find the radius of the planet or stellar radius or semi-major axis or inclination')
+    raise Exception('Could not find the radius of the planet or stellar radius or semi-major axis or inclination')
     sys.exit(0)
 
 
 def lnlike(theta, x, y, sigma, per=per):
+  r, a, b, u1, u2 = theta
+  # Set up transit parameters.
+  params = batman.TransitParams()
+  params.t0 = 0
+  params.per = per
+  params.rp = r
+  params.a = a
+  params.inc = np.arccos(b/a)*(180./np.pi)
+  params.ecc = 0
+  params.w = 96
+  params.u = [u1, u2]
+  params.limb_dark = 'quadratic'
+  # Initialize the transit model.
+  m_init = batman.TransitModel(params, x)
+  model = m_init.light_curve(params)  
+  inv_sigma2 = 1.0 / (sigma**2)
+  return -0.5*(np.sum((y-model)**2*inv_sigma2))
+  
+ 
+def lnlike_fit(theta, x, y, sigma, per=per):
   r, a, b, u1, u2 = theta
   # Set up transit parameters.
   params = batman.TransitParams()
@@ -125,7 +154,6 @@ def lnlike(theta, x, y, sigma, per=per):
   else:
     return -0.5*(np.sum((y-model)**2*inv_sigma2))
   
- 
 
 print('u1 ', u1_i)
 print('u2 ', u2_i)
@@ -141,8 +169,8 @@ burn_in = 2000
 ndim = 5
 nwalkers = 100
 
-nll = lambda *args: -lnlike(*args)
-initial = np.array([rp_i, a_i, b_i, u1_i, u2_i]) #+ 1e-1*np.random.randn(ndim)
+nll = lambda *args: -lnlike_fit(*args)
+initial = np.array([rp_i, a_i, b_i, u1_i, u2_i])  
 soln = minimize(nll, initial, args=(time, flux, sigma))
 rp_ml, a_ml, b_ml, u1_ml, u2_ml = soln.x
 
@@ -165,33 +193,28 @@ print("u2 = {0:.3f}".format(u2_ml))
 yerr = np.full((time.shape[0]), sigma) 
 
 
+# choose k - the number of bins - such that the bin's width is about 1 minute
+k = 0
+for i in range(500, 2000, 20):
+  current_bin_size = (np.max(time)-np.min(time))/i 
+  if 1.2/1440 > current_bin_size > 0.8/1440:
+    k = i
+    break
+
+if 1.2/1440 < (np.max(time)-np.min(time))/k or (np.max(time)-np.min(time))/k < 0.8/1440:
+  raise Exception('Could not select the bin width to be ~1 minute; increase the number of steps')
+  sys.exit(0)
+
+print(f'# of bins {k}')
 # Overplot the phase binned light curve
-bins = np.linspace(np.min(time), np.max(time), 200)
+bins = np.linspace(np.min(time), np.max(time), k)
 
 arr1inds = time.argsort()
-sorted_arr1 = time[arr1inds[::-1]]
-sorted_arr2 = flux[arr1inds[::-1]]
-#bins = np.linspace(-0.4, 0.4, 10)
-#print('bins ', bins)
-denom, _ = np.histogram(sorted_arr1, bins)
-num, _ = np.histogram(sorted_arr1, bins, weights=sorted_arr2)
+sorted_time = time[arr1inds[::-1]]
+sorted_flux = flux[arr1inds[::-1]] 
+denom, _ = np.histogram(sorted_time, bins)
+num, _ = np.histogram(sorted_time, bins, weights=sorted_flux)
 denom[num == 0] = 1.0
-#plt.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, '.k', color="C1", lw=2)
-#plt.xlabel("Time since transit")
-#plt.ylabel("Flux");
-#plt.show()
- 
-yerr = np.full((num.shape[0]), sigma)  
-#fig, ax = plt.subplots()
-#ax.plot(0.5 * (bins[1:] + bins[:-1]), num , color="C1")
-
- 
-#ax.set_ylabel("de-trended flux")
-#ax.set_xlabel("time");
-#plt.show()
-
-#time = 0.5 * (bins[1:] + bins[:-1])
-#flux =  num / denom
 
 # Plot optimized transit model.
 params_final = batman.TransitParams()
@@ -199,7 +222,7 @@ params_final.t0 = 0
 params_final.per = per
 params_final.rp = rp_ml
 params_final.a = a_ml
-params_final.inc =  np.arccos(b_ml/a_ml)*(180./np.pi)#np.arccos(theta_max[3] / theta_max[2]) * (180. / np.pi)
+params_final.inc =  np.arccos(b_ml/a_ml)*(180./np.pi)
 params_final.ecc = 0
 params_final.w = 96
 params_final.u = [u1_ml, u2_ml]
@@ -210,33 +233,38 @@ f_final = m.light_curve(params_final)
 final_fig, ax = plt.subplots(figsize=(10,8))
 ax.set_title(planet_name)
 #ax.errorbar(time,flux,yerr=yerr,fmt='.k',capsize=0,alpha=0.4,zorder=1)
-ax.errorbar(0.5 * (bins[1:] + bins[:-1]), num / denom, yerr = yerr, fmt = '.k', color="C1", lw=1)
-#ax.plot(time, flux, 'k.',alpha=0.8,lw=3,zorder=2)
+ax.plot(0.5 * (bins[1:] + bins[:-1]), num / denom, '.k')
 ax.plot(tl, f_final, 'r-',alpha=0.8,lw=3,zorder=2)
 ax.set_xlabel("Time")
 ax.set_ylabel("Relative Flux")
 ax.legend(('BATMAN','TESS'), loc=2)
+pdf.savefig(final_fig)
+
 save_to = path + '/figures'
-final_fig.savefig(save_to + f'/binned_lc_{action}.png', bbox_inches='tight')
+if action == False:
+  final_fig.savefig(save_to + '/binned_lc_folded.png', bbox_inches='tight')
+else:
+  final_fig.savefig(save_to + '/binned_lc_refolded.png', bbox_inches='tight')
 plt.show()
      
 
-save_to = path + '/figures'
-final_fig.savefig(save_to + f'/MCMCfit_{action}.png', bbox_inches='tight')
-
-m = batman.TransitModel(params_final, time)
+m = batman.TransitModel(params_final, 0.5*(bins[1:] + bins[:-1]))
 f_final = m.light_curve(params_final)
 
-final_fig, ax = plt.subplots(figsize=(10,8))
+
+residuals_fig, ax = plt.subplots(figsize=(10,8))
 ax.set_title(planet_name)
-ax.plot(time, flux-f_final, 'k.',alpha=0.8,lw=3,zorder=2)
+ax.plot(0.5*(bins[1:] + bins[:-1]),  num / denom - f_final, 'k.',alpha=0.8,lw=3,zorder=2)
 ax.set_xlabel("Time")
 ax.set_ylabel("Residuals")
+pdf.savefig(residuals_fig)
 plt.show()
      
  
-save_to = path + '/figures'
-final_fig.savefig(save_to + f'/residuals_{action}.png', bbox_inches='tight')
+if action == False:
+  residuals_fig.savefig(save_to + f'/residuals_folded.png', bbox_inches='tight')
+else:
+  residuals_fig.savefig(save_to + f'/residuals_refolded.png', bbox_inches='tight')
 
  
 
@@ -303,6 +331,7 @@ np.savetxt(path + '/data/transit/theta_percentiles.txt', theta_percentiles)
 
 param_names = ["$rp$", "$a$", "$b$", "u1", "u2"]
 corn_fig = corner.corner(samples, labels=param_names)
+pdf.savefig(corn_fig)
 corn_fig.savefig(save_to + f'/corner_folded_transit_{action}.png', bbox_inches='tight')
 
 
@@ -317,4 +346,6 @@ for i in range(ndim):
     ax.yaxis.set_label_coords(-0.1, 0.5)
 
 axes[-1].set_xlabel("step number");
+pdf.savefig(fig)
 fig.savefig(save_to + f'/random_walkers_{action}.png', bbox_inches='tight') 
+pdf.close()

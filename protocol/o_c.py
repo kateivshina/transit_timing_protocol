@@ -12,18 +12,15 @@ from argparse import ArgumentParser
 # parse data about the planet
 parser = ArgumentParser(fromfile_prefix_chars='@')
 parser.add_argument('--mission')
-parser.add_argument('--planet')
+parser.add_argument('--pl_hostname')
+parser.add_argument('--pl_letter') 
 parser.add_argument('--cadence')
-parser.add_argument('--radius') #, nargs='*')
-parser.add_argument('--semi_major_axis')
-parser.add_argument('--b')
-parser.add_argument('--period')
+parser.add_argument('--N')
+parser.add_argument('--degree')
 parser.add_argument('--parent_dir')
 parser.add_argument('--path_to_data_file')
 parser.add_argument('--refolded')
-parser.add_argument('--logg')
-parser.add_argument('--Teff')
-parser.add_argument('--Z')
+
 
 
 args = parser.parse_args()
