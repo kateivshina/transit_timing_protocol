@@ -9,6 +9,9 @@ import pandas as pd
 import os
 import sys
 from argparse import ArgumentParser
+import matplotlib as mpl
+#mpl.rc('axes', labelsize=2, titlesize=4)
+
 
 # parse input data
 parser = ArgumentParser(fromfile_prefix_chars='@')
@@ -126,7 +129,6 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 plt.plot(time_, data_, '.k')
                 plt.xlabel("Time [days]")
                 plt.ylabel("Relative flux")
-                plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
                 plt.close(fig)
 
             
@@ -142,8 +144,6 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
                 plt.plot(time_, data_, '.k')
                 plt.xlabel("Time [days]")
                 plt.ylabel("Relative flux")
-                plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
-                pdf.savefig(fig)
                 plt.close(fig)
     
     flux_array = np.array(flux_array, dtype=object, copy=False)
@@ -205,10 +205,25 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         os.mkdir(PATH_TO_RESIDUALS)
 
     coeffs = []
-  
 
+
+  
+    fig, ax = plt.subplots(flux_masked.shape[0], 3)
+
+    cols = ['Flux', 'Relative flux', 'Residuals']
+    for axi, col in zip(ax[0], cols):
+    	axi.set_title(col, fontsize=6)
+    
+   # axs[-1,-1].axis('off')
+   # ax=axs.ravel()
+    #fig1 = plt.figure()
+    #fig2 = plt.figure()
+    #fig = plt.figure()
 
     for i in range(flux_masked.shape[0]):
+    	#whole_pt = flux_masked.shape[0] // 5
+    	#remainder = flux_masked.shape[0] % 5
+
         flux_i_out = flux_masked[i]
         time_i_out = time_masked[i]
         flux_i = flux[i]
@@ -235,34 +250,62 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         stds.append(np.std(y))
         coeffs.append([k, b])
         
+        #ax = fig.add_subplot(flux_masked.shape[0], 3, i+1)
+        #plt.subplot(flux_masked.shape[0], 3, 1)
+        ax[i, 0].plot(time_i, fit, 'r', linewidth=0.2)
+        ax[i, 0].plot(time_i, flux_i, '.b', markersize = 0.2)
+       # plt.title('Flux + Fit')
+        #ax[i, 0].set_xlabel("Time [days]",  fontsize=2)
+        #ax[i, 0].set_ylabel("Flux",  fontsize=2) 
+        plt.xticks(fontsize=2, rotation=45)
+        ax[i, 0].xaxis.set_tick_params(labelsize=2)
+        ax[i, 0].yaxis.set_tick_params(labelsize=2)
 
-        fig = plt.figure()
-        plt.plot(time_i, fit, 'r')
-        plt.plot(time_i, flux_i, '.b')
-        plt.savefig(PATH_TO_FIT + f'/transit_{i}')
-        pdf.savefig(fig)
-        plt.close(fig)
 
-        fig1 = plt.figure()
-        plt.plot(time_i, corrected_flux_i, '.k')
-        plt.xlabel("Time [days]")
-        plt.ylabel("Relative flux")
-        plt.savefig(PATH_TO_FIGURES + f'/transit_{i}')
-        plt.close(fig1)
-
-        fig2 = plt.figure()
-        residuals = flux_i - fit
-        plt.plot(time_i, residuals, '.k')
-        plt.xlabel("Time [days]")
-        plt.ylabel("Residuals")
-        plt.savefig(PATH_TO_RESIDUALS + f'/transit_{i}')
-        plt.close(fig2)
+    
+        #ax = fig.add_subplot(flux_masked.shape[0], 3, i+2)
+        #plt.subplot(flux_masked.shape[0], 3, 2)
+        ax[i, 1].plot(time_i, corrected_flux_i, '.k', markersize = 0.2)
+       # plt.title('De-trended flux')
+        #ax[i, 1].set_xlabel("Time [days]",  fontsize=2)
+        #ax[i, 1].set_ylabel("Rltv flux",  fontsize=2)
+        plt.xticks(fontsize=2)
+        ax[i, 1].xaxis.set_tick_params(labelsize=2)
+        ax[i, 1].yaxis.set_tick_params(labelsize=2)
         
+        
+        #ax = fig.add_subplot(flux_masked.shape[0], 3, i+3)
+        #plt.subplot(flux_masked.shape[0], 3, 3)
+        residuals = flux_i - fit
+        ax[i, 2].plot(time_i, residuals, '.k', markersize = 0.2)
+       # plt.title('Residuals')
+        #ax[i, 2].set_xlabel("Time [days]",  fontsize=2)
+        #ax[i, 2].set_ylabel("Residuals",  fontsize=2)
+        plt.xticks(fontsize=2)
+        ax[i, 2].xaxis.set_tick_params(labelsize=2)
+        ax[i, 2].yaxis.set_tick_params(labelsize=2)
+       # plt.show()
+
+   
+
+
+    fig.tight_layout()    
+
+    pdf.savefig(fig)
+    plt.close(fig)
+
+    #pdf.savefig(fig1)
+    #plt.close(fig1)
+
+    #pdf.savefig(fig2)
+    #plt.close(fig2)
+
     corrected_flux = np.array(corrected_flux, dtype=object, copy=False)
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)
     np.savetxt(path + '/coeffs.txt', coeffs)
+
 
 
 
@@ -286,15 +329,16 @@ if int(cadence) == 2:
     fig, ax = plt.subplots()
 
     # Plot the timeseries in black circles.
-    ax.plot(tess_bjds, pdcsap_fluxes, '.k')
+    ax.plot(tess_bjds, pdcsap_fluxes, '.k', markersize=1)
+    ax.set_title(f'{planet_name}')
     plt.xlabel('Time')
     plt.ylabel('Flux')
-    plt.savefig(path_to_fig + '/lc_'+f'{planet_name.replace(" ", "_")}')
     pdf.savefig(fig)
     plt.close(fig)
 
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
         aperture = hdulist[2].data
+
 
     # Start figure and axis.
     fig, ax = plt.subplots()
@@ -304,7 +348,6 @@ if int(cadence) == 2:
     cbar = fig.colorbar(cax)
     # Add a title to the plot.
     fig.suptitle("Aperture")
-    plt.savefig(path_to_fig + '/selected_aperture'+f'{ planet_name.replace(" ", "_")}')
     pdf.savefig(fig)
 
 
@@ -340,6 +383,8 @@ if int(cadence) == 2:
     bls_depth = bls_power.depth[index]
     transit_mask = bls.transit_mask(time, bls_period, 0.6*pl_trandur, bls_t0)
 
+    print('bls t0 ', bls_t0)
+
 
     x = np.ascontiguousarray(time, dtype=np.float64)
     y = np.ascontiguousarray(pdcsap_fluxes, dtype=np.float64) 
@@ -350,8 +395,8 @@ if int(cadence) == 2:
      
     x_fold = (time - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
 
-    m = np.abs(x_fold) < N*pl_trandur
-    transit_mask =  np.abs(x_fold) < 0.3*pl_trandur
+    m = np.abs(x_fold) < N*0.5*pl_trandur
+    transit_mask =  np.abs(x_fold) < 0.1*pl_trandur
     not_transit = ~transit_mask
 
     # folded data with transit masked:
@@ -369,12 +414,22 @@ if int(cadence) == 2:
     # Plot the timeseries in black circles.
     ax.plot(x, y, '.k', markersize=1)
     ax.plot(x[transit_mask], y[transit_mask], '.r', markersize=1)
+    ax.set_title('Transit data (red)')
     plt.xlabel('Time')
     plt.ylabel('Flux')
-    plt.savefig(path_to_fig + '/lc_w_transits_selected'+f'{planet_name.replace(" ", "_")}')
     pdf.savefig(fig)
     plt.close(fig)
  
+    fig, ax = plt.subplots()
+
+    # Plot the timeseries in black circles.
+    ax.plot(x, y, '.k', markersize=1)
+    ax.plot(times_masked, flux_masked, '.r', markersize=1)
+    ax.set_title('Out-of-transit data (red)')
+    plt.xlabel('Time')
+    plt.ylabel('Flux')
+    pdf.savefig(fig)
+    plt.close(fig)
 
 else:
     with fits.open(path_to_data_file, mode="readonly") as hdu: 

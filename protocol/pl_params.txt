@@ -2,8 +2,8 @@
 --pl_hostname=WASP 19
 --pl_letter=b
 --cadence=2
---N=1
+--N=0.5
 --degree=1
 --parent_dir=/Users/kate/Documents/usrp/TTP
---path_to_data_file=/Users/kate/Documents/usrp/TTP/data/wasp19_lc.fits
+--path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp19_lc.fits
 --refolded=True
