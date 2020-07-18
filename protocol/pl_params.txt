@@ -6,4 +6,3 @@
 --degree=1
 --parent_dir=/Users/kate/Documents/usrp/TTP
 --path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp19_lc.fits
---refolded=True

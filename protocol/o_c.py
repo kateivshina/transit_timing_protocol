@@ -9,62 +9,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from argparse import ArgumentParser
 
-# parse data about the planet
-parser = ArgumentParser(fromfile_prefix_chars='@')
-parser.add_argument('--mission')
-parser.add_argument('--pl_hostname')
-parser.add_argument('--pl_letter') 
-parser.add_argument('--cadence')
-parser.add_argument('--N')
-parser.add_argument('--degree')
-parser.add_argument('--parent_dir')
-parser.add_argument('--path_to_data_file')
-parser.add_argument('--refolded')
-
-
-
-args = parser.parse_args()
-
  
-# path info
-MISSION = args.mission
-cadence = args.cadence
-planet_name = args.planet
-path_to_data_file =args.path_to_data_file
-# Path 
-parent_dir = args.parent_dir
-directory = planet_name.replace(" ", "_") 
-path = f'{parent_dir}' + f'/{directory}'  
-
-
-
-# MCMC parameters
-nsteps = 20000
-burn_in = 5000
-ndim = 2
-nwalkers = 100
-
-t0_w_uncert = np.loadtxt(path + '/data/transit/t0_w_uncert.txt')
-err = t0_w_uncert[:,1]
-t0_k_b = np.loadtxt(path + '/data/transit/t0_k_b.txt')
-t0s = t0_k_b[:, 0]
-
-# epoch number 
-#N = np.array(range(0, t0_k_b.shape[0]))
-# wasp 12
-#N_1 = np.array(range(0, 11))
-#N_2 = np.array(range(15, t0_k_b.shape[0]+4))
-#wasp 4
-N_1 = np.array(range(0, 9))
-N_2 = np.array(range(11, t0_k_b.shape[0]+2))
-N = np.concatenate((N_1, N_2), axis=0)
-
-# need to input actual stds
-
-sigma = np.mean(err)
-per_i = float(args.period)
-t0_i = t0s[0]
-
 
 # Priors.
 def lnprior(theta, t0_init): 
@@ -89,49 +34,103 @@ def lnprob(theta, x, y, sigma, t0_init):
   return lp + lnlike(theta, x, y, sigma)
 
 
+def o_c(planet_name,
+        pl_hostname,
+        pl_letter,
+        parent_dir):
 
 
-initial_params = per_i, t0_i 
- 
-nll = lambda *args: -lnlike(*args) 
-initial = np.array([per_i, t0_i]) + 1e-5*np.random.randn(ndim)
-soln = minimize(nll, initial, args=(N, t0s, sigma))  
-per_ml, t0_ml  = soln.x 
-# Initialize walkers around maximum likelihood.
-pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
 
-# Set up sampler.
-sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(N, t0s, sigma, t0_i))
+  # Path 
+  directory = planet_name.replace(" ", "_") 
+  path = f'{parent_dir}' + f'/{directory}'  
 
-# Run MCMC for n steps and display progress bar.
-width = 50
-for i, result in enumerate(sampler.sample(pos, iterations=nsteps)):
-    n = int((width+1) * float(i) / nsteps)
-    sys.stdout.write("\r{}[{}{}]{}".format('sampling... ', '#' * n, ' ' * (width - n), ' (%s%%)' % str(100. * float(i) / nsteps)))
-sys.stdout.write("\n")
-print ('Sampling complete!')
+  df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv')
+  df = df.loc[df['pl_hostname'] == f'{pl_hostname.replace(" ", "-")}']
+  df = df.loc[df['pl_letter'] == f'{pl_letter}']
+  period = df['pl_orbper'].iloc[0]
+
+  # MCMC parameters
+  nsteps = 20000
+  burn_in = 5000
+  ndim = 2
+  nwalkers = 100
+
+  t0_w_uncert = np.loadtxt(path + '/data/transit/t0_w_uncert.txt')
+  err = t0_w_uncert[:,1]
+  t0_k_b = np.loadtxt(path + '/data/transit/t0_k_b.txt')
+  t0s = t0_k_b[:, 0]
+
+  # epoch number 
+  #N = np.array(range(0, t0_k_b.shape[0]))
+  # wasp 12
+  #N_1 = np.array(range(0, 11))
+  #N_2 = np.array(range(15, t0_k_b.shape[0]+4))
+  #wasp 4
+  #N_1 = np.array(range(0, 9))
+  #N_2 = np.array(range(11, t0_k_b.shape[0]+2))
+  #N = np.concatenate((N_1, N_2), axis=0)
+  for i in range(t0s.shape[0]-1):
+    delta = t0s[i+1] - t0s[i]
+    if delta/period > 1.5:
+      shift = int(delta/period)
+      N1 = range(i)
+      end = t0s.shape[0] - len(N1)
+      N2 = range(i+shift, i+shift+end)
+      N = np.concatenate((N1, N2), axis=0)
+      print('N ', N)
 
 
-samples = sampler.flatchain
+  # need to input actual stds
+  sigma = np.mean(err)
+  per_i = float(args.period)
+  t0_i = t0s[0]
 
-# Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
-period, t0  = map(
-	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-     
-print('period, t0 ', period, t0)     
-theta_max  = samples[np.argmax(sampler.flatlnprobability)]
-print('theta max', theta_max)
-period, t0 = theta_max[0], theta_max[1]
 
-calculated = N*per_ml + t0_ml
-o_c = t0s-calculated
-plt.figure()
-plt.errorbar(N, o_c*24*60, yerr = err*24*60, fmt='o', mew = 1)   # O-C_1 plot (mcmc fitted params)
 
-#plt.plot(N, o_c*24*60, '.k')
-plt.xlabel('Epoch')
-plt.ylabel('Time deviation [min]')
-plt.title(f'{planet_name} transits (constant period model)')
-plt.savefig(path + '/figures/o_c.png')
-plt.show()
+  initial_params = per_i, t0_i 
+   
+  nll = lambda *args: -lnlike(*args) 
+  initial = np.array([per_i, t0_i]) + 1e-5*np.random.randn(ndim)
+  soln = minimize(nll, initial, args=(N, t0s, sigma))  
+  per_ml, t0_ml  = soln.x 
+  # Initialize walkers around maximum likelihood.
+  pos = [initial_params + 1e-5*np.random.randn(ndim) for i in range(nwalkers)]
+
+  # Set up sampler.
+  sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(N, t0s, sigma, t0_i))
+
+  # Run MCMC for n steps and display progress bar.
+  width = 50
+  for i, result in enumerate(sampler.sample(pos, iterations=nsteps)):
+      n = int((width+1) * float(i) / nsteps)
+      sys.stdout.write("\r{}[{}{}]{}".format('sampling... ', '#' * n, ' ' * (width - n), ' (%s%%)' % str(100. * float(i) / nsteps)))
+  sys.stdout.write("\n")
+  print ('Sampling complete!')
+
+
+  samples = sampler.chain
+  # Discard burn-in. 
+  samples = samples[:, burn_in:, :].reshape((-1, ndim))
+
+  # Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
+  period, t0  = map(
+  	    lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+
+  samples = sampler.flatchain        
+  theta_max  = samples[np.argmax(sampler.flatlnprobability)]
+  period, t0 = theta_max[0], theta_max[1]
+
+  calculated = N*per_ml + t0_ml
+  o_c = t0s-calculated
+  plt.figure()
+  plt.errorbar(N, o_c*24*60, yerr = t0_w_uncert[:,1]*24*60, fmt='o', mew = 1)   
+
+  #plt.plot(N, o_c*24*60, '.k')
+  plt.xlabel('Epoch')
+  plt.ylabel('Time deviation [min]')
+  plt.title(f'{planet_name} transits (constant period model)')
+  plt.legend(f'$t0$: {t0_ml} Period: {per_ml}')
+  plt.savefig(path + '/figures/tess_o_c.png')
+  plt.show()
 
