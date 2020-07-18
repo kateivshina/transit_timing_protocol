@@ -84,7 +84,7 @@ def match(g, t, z, path2table):
 
 
 if action == 'True':
-  out_pdf = '/Users/kate/Desktop/2_refolded.pdf'
+  out_pdf = path + '/figures/mcmc_a_refolded.pdf'
   pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
   flux = np.load(path + '/data/transit/corrected_flux_refolded.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean_refolded.npy', allow_pickle=True) 
@@ -93,7 +93,7 @@ if action == 'True':
   rp_i, a_i, b_i, u1_i, u2_i  = theta[0], theta[1], theta[2], theta[3], theta[4]
 
 else:
-  out_pdf = '/Users/kate/Desktop/2.pdf'
+  out_pdf =  path + '/figures/mcmc_a.pdf'
   pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
   flux = np.load(path + '/data/transit/corrected_flux_clean.npy', allow_pickle=True)
   time = np.load(path + '/data/transit/individual_time_folded_array_clean.npy', allow_pickle=True) 

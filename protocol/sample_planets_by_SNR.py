@@ -10,7 +10,8 @@ df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/transiting_planet_databas
  
 
 # define condition to sample planets
-df['SNR_sort'] =  df['pl_trandep'] * df['pl_trandur'] / (df['pl_orbper'] * df['TESS_mag_uncert'])
+#df['SNR_sort'] =  df['pl_trandep'] * df['pl_trandur'] / (np.sqrt(df['pl_orbper']) * df['TESS_mag_uncert'])
+df['SNR_sort'] =  df['pl_trandep'] / (np.sqrt(df['pl_orbper']) * df['TESS_mag_uncert'])
 
 
 df = df.sort_values(by=['SNR_sort'], ascending = False)
@@ -22,7 +23,7 @@ print('head ', df['SNR_sort'].head())
 #print('head ', sample_df['pl_trandur'].head())
  
 #sample_df = sample_df.drop(['m_M', 'a_R'], axis=1)
-df.to_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv', index = False)
+df.to_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets_wo_dur.csv', index = False)
 
  
 # plotting transit depth (S_pl/S_star) vs Period
@@ -38,11 +39,11 @@ sample_df = df[ ~df['pl_trandep'].isnull() & ~df['pl_orbper'].isnull()]
 
  
 
-fig = go.Figure(data=go.Scatter(x=sample_df['pl_orbper'],
-                                y=sample_df['pl_trandep'],
+fig = go.Figure(data=go.Scatter(x=np.log(sample_df['pl_orbper']),
+                                y=np.log(sample_df['pl_trandep']),
                                 mode='markers',
                                 marker=dict(
-        						size=16,
+        						size=4,
         						color=sample_df['st_optmag'], #set color equal to a variable
         						colorscale='Viridis', # one of plotly colorscales
         						showscale=True))) # hover text goes here
@@ -52,14 +53,14 @@ fig.update_layout(annotations=[
             x=0.5,
             y=-0.15,
             showarrow=False,
-            text="Period [days]",
+            text="log(period)",
             xref="paper",
             yref="paper"),
         dict(
             x=-0.12,
             y=0.5,
             showarrow=False,
-            text="Depth (%)",
+            text="log(depth)",
             textangle=-90,
             xref="paper",
             yref="paper")], title='Depth vs Period')

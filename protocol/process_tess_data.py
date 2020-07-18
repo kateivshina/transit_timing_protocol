@@ -10,6 +10,7 @@ import os
 import sys
 from argparse import ArgumentParser
 import matplotlib as mpl
+from lightkurve import search_targetpixelfile
 #mpl.rc('axes', labelsize=2, titlesize=4)
 
 
@@ -63,18 +64,18 @@ if np.isnan(pl_trandur):
 
  
 
-if not os.path.isdir(path):
-    os.mkdir(path)
-if not os.path.isdir(path +'/figures'):
-    os.mkdir(path +'/figures')
+#if not os.path.isdir(path):
+#    os.mkdir(path)
+#if not os.path.isdir(path +'/figures'):
+#    os.mkdir(path +'/figures')
 
 path_to_fig = path +'/figures'
 path_to_data = path + '/data'
 
-if not os.path.isdir(path_to_data):
-    os.mkdir(path_to_data)
-    os.mkdir(path_to_data + '/transit_masked')
-    os.mkdir(path_to_data + '/transit')
+#if not os.path.isdir(path_to_data):
+#    os.mkdir(path_to_data)
+#    os.mkdir(path_to_data + '/transit_masked')
+#    os.mkdir(path_to_data + '/transit')
 
 
 #################################################################
@@ -112,8 +113,8 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
     time_folded_array = []
 
     PATH_TO_FIGURES = path_to_figures + '/individual_transits_figures'
-    if os.path.isdir(PATH_TO_FIGURES) == False and transit == True:
-        os.mkdir(PATH_TO_FIGURES)
+    #if os.path.isdir(PATH_TO_FIGURES) == False and transit == True:
+    #    os.mkdir(PATH_TO_FIGURES)
    
 
     for i in range(len(indx)):
@@ -193,22 +194,23 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     corrected_flux = []
 
     PATH_TO_FIGURES = path_to_figures + '/transits_after_detrending'
-    if os.path.isdir(PATH_TO_FIGURES) == False:
-        os.mkdir(PATH_TO_FIGURES)
+  # if os.path.isdir(PATH_TO_FIGURES) == False:
+  #      os.mkdir(PATH_TO_FIGURES)
 
-    PATH_TO_FIT = path_to_figures + '/fits'
-    if os.path.isdir(PATH_TO_FIT) == False:
-        os.mkdir(PATH_TO_FIT)
+  #  PATH_TO_FIT = path_to_figures + '/fits'
+  #  if os.path.isdir(PATH_TO_FIT) == False:
+  #      os.mkdir(PATH_TO_FIT)
 
-    PATH_TO_RESIDUALS = path_to_figures + '/residuals'
-    if os.path.isdir(PATH_TO_RESIDUALS) == False:
-        os.mkdir(PATH_TO_RESIDUALS)
+  #  PATH_TO_RESIDUALS = path_to_figures + '/residuals'
+  #  if os.path.isdir(PATH_TO_RESIDUALS) == False:
+  #      os.mkdir(PATH_TO_RESIDUALS)
 
     coeffs = []
 
 
   
-    fig, ax = plt.subplots(flux_masked.shape[0], 3)
+   # fig, ax = plt.subplots(flux_masked.shape[0], 3)
+    fig, ax = plt.subplots(6, 3)
 
     cols = ['Flux', 'Relative flux', 'Residuals']
     for axi, col in zip(ax[0], cols):
@@ -237,6 +239,12 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
             a, b, c = np.polyfit(time_i_out, flux_i_out, deg=2)
             fit = a * time_i * time_i + b * time_i + c
 
+        if i % 6 == 0 and i != 0:
+            pdf.savefig(fig)
+            fig, ax = plt.subplots(6, 3)
+            cols = ['Flux', 'Relative flux', 'Residuals']
+            for axi, col in zip(ax[0], cols):
+                axi.set_title(col, fontsize=6)
 
         # divide the data by the best fit
         corrected_flux_i = flux_i/fit
@@ -252,44 +260,45 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         
         #ax = fig.add_subplot(flux_masked.shape[0], 3, i+1)
         #plt.subplot(flux_masked.shape[0], 3, 1)
-        ax[i, 0].plot(time_i, fit, 'r', linewidth=0.2)
-        ax[i, 0].plot(time_i, flux_i, '.b', markersize = 0.2)
+        ax[i % 6, 0].plot(time_i, fit, 'r', linewidth=0.8)
+        ax[i % 6, 0].plot(time_i, flux_i, '.b', markersize = 0.8)
        # plt.title('Flux + Fit')
-        #ax[i, 0].set_xlabel("Time [days]",  fontsize=2)
-        #ax[i, 0].set_ylabel("Flux",  fontsize=2) 
-        plt.xticks(fontsize=2, rotation=45)
-        ax[i, 0].xaxis.set_tick_params(labelsize=2)
-        ax[i, 0].yaxis.set_tick_params(labelsize=2)
+        ax[i % 6, 0].set_xlabel("Time [days]",  fontsize=2)
+        ax[i % 6, 0].set_ylabel("Flux",  fontsize=2) 
+        plt.xticks(fontsize=8, rotation=45)
+        ax[i % 6, 0].xaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 0].yaxis.set_tick_params(labelsize=3)
 
 
     
         #ax = fig.add_subplot(flux_masked.shape[0], 3, i+2)
         #plt.subplot(flux_masked.shape[0], 3, 2)
-        ax[i, 1].plot(time_i, corrected_flux_i, '.k', markersize = 0.2)
+        ax[i % 6, 1].plot(time_i, corrected_flux_i, '.b', markersize = 0.8)
        # plt.title('De-trended flux')
-        #ax[i, 1].set_xlabel("Time [days]",  fontsize=2)
-        #ax[i, 1].set_ylabel("Rltv flux",  fontsize=2)
-        plt.xticks(fontsize=2)
-        ax[i, 1].xaxis.set_tick_params(labelsize=2)
-        ax[i, 1].yaxis.set_tick_params(labelsize=2)
+        ax[i % 6, 1].set_xlabel("Time [days]",  fontsize=2)
+        ax[i % 6, 1].set_ylabel("Relative flux",  fontsize=2)
+        plt.xticks(fontsize=8)
+        ax[i % 6, 1].xaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 1].yaxis.set_tick_params(labelsize=3)
         
         
         #ax = fig.add_subplot(flux_masked.shape[0], 3, i+3)
         #plt.subplot(flux_masked.shape[0], 3, 3)
         residuals = flux_i - fit
-        ax[i, 2].plot(time_i, residuals, '.k', markersize = 0.2)
+        ax[i % 6, 2].plot(time_i, residuals, '.b', markersize = 0.8)
        # plt.title('Residuals')
-        #ax[i, 2].set_xlabel("Time [days]",  fontsize=2)
-        #ax[i, 2].set_ylabel("Residuals",  fontsize=2)
-        plt.xticks(fontsize=2)
-        ax[i, 2].xaxis.set_tick_params(labelsize=2)
-        ax[i, 2].yaxis.set_tick_params(labelsize=2)
+        ax[i % 6, 2].set_xlabel("Time [days]",  fontsize=2)
+        ax[i % 6, 2].set_ylabel("Residuals",  fontsize=2)
+        plt.xticks(fontsize=8)
+        ax[i % 6, 2].xaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 2].yaxis.set_tick_params(labelsize=3)
        # plt.show()
+        fig.tight_layout()  
 
    
 
 
-    fig.tight_layout()    
+      
 
     pdf.savefig(fig)
     plt.close(fig)
@@ -316,14 +325,22 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 #################################################################
 
 if int(cadence) == 2:
-    out_pdf = '/Users/kate/Desktop/1.pdf'
+    out_pdf = path_to_fig + '/preprocess.pdf'
     pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
     figs = plt.figure()
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
         tess_bjds = hdulist[1].data['TIME']
         sap_fluxes = hdulist[1].data['SAP_FLUX']
         pdcsap_fluxes = hdulist[1].data['PDCSAP_FLUX']
-        #print('Header:', hdulist[0].header)
+        tic = hdulist[0].header['OBJECT']
+
+    # plot pixel target file    
+    #tpf = search_targetpixelfile(f'{tic}').download()
+    #fig = plt.figure()
+    #tpf.plot(frame=0)
+    #plt.show()
+    #pdf.savefig(fig)
+    #plt.close(fig)
 
     # Start figure and axis.
     fig, ax = plt.subplots()
@@ -338,6 +355,15 @@ if int(cadence) == 2:
 
     with fits.open(path_to_data_file, mode="readonly") as hdulist:
         aperture = hdulist[2].data
+        hdr = hdulist[2].header 
+   # fig = plt.figure()
+   # tpf.plot(aperture_mask=aperture)
+   # plt.show()
+   # pdf.savefig(fig)
+   # plt.close(fig)
+
+         
+
 
 
     # Start figure and axis.
@@ -383,7 +409,7 @@ if int(cadence) == 2:
     bls_depth = bls_power.depth[index]
     transit_mask = bls.transit_mask(time, bls_period, 0.6*pl_trandur, bls_t0)
 
-    print('bls t0 ', bls_t0)
+     
 
 
     x = np.ascontiguousarray(time, dtype=np.float64)
