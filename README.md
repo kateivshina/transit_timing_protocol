@@ -46,9 +46,9 @@ This protocol does the following:
 4. runs MCMC to estimate the uncertainties of {a, b, r, u1,u2}; 
 5. fits each transit event with a transit model with the previously derived {a, b, r, u1,u2} parameters and finds the maximum likelihood {t0, k, b} as well as their uncertainties; 
 6. re-folds the data using the found mid-transit times; 
-7. repeats steps  (3)-(6) to re-derive the mid-transit times
-8. plots O-C just for the TESS data
-9. plots O-C including the historical data
+7. repeats steps  (3)-(6) to re-derive the mid-transit times;
+8. plots O-C just for the TESS data;
+9. plots O-C including the historical data;
 
 The following figures are stored in the ~/figures folder:
 1. *preprocess.pdf* contains TESS light curve of a given planet, the selected aperture, a figure showing the transit and out-of-transit data selected by the algorithm, figures containing individual transit events, their de-trended light curves and the residuals.
