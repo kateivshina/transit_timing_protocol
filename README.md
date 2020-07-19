@@ -39,7 +39,7 @@ cd transit_timing_protocol/protocol
 python3 main.py @pl_params.txt
 ```
 
-This protocol 
+This protocol does the following:
 1. selects individual transits from the TESS light curve; 
 2. de-trends them; 
 3. finds maximum likelihood {a, b, r, u1,u2}; 
