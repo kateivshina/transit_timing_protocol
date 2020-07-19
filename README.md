@@ -56,5 +56,5 @@ The following figures are stored in the ~/figures folder:
 3. *mcmc_b.pdf* contains figures of individual transit events, their de-trended light curves fitted with the transit model and the residuals. This file also contains a table of the found mid-transit times and their uncertainties.
 4.  *mcmc_b_corner.pdf* contains corner plots and figures of random walkers for {t0, k, b} for each transit event.
 5. *mcmc_a_refolded.pdf*, *mcmc_b_refolded.pdf*, *mcmc_b_corner_refolded* contains the same information as files 2-4 but for the re-folded data.
-6. *tess_o_c.png* contains O-C just for the TESS data
+6. *tess_o_c.png* contains O-C just for the TESS data.
 7. *o_c_combined.png* contains O-C for TESS as well as historical data.
