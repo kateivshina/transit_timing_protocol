@@ -137,7 +137,7 @@ def run_mcmc_a(planet_name,
     out_pdf = path + '/figures/mcmc_a_refolded.pdf'
     pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
     flux = np.load(path + '/data/transit/corrected_flux_refolded.npy', allow_pickle=True)
-    time = np.load(path + '/data/transit/individual_time_folded_array_clean_refolded.npy', allow_pickle=True) 
+    time = np.load(path + '/data/transit/individual_time_folded_array_refolded.npy', allow_pickle=True) 
     stds = np.load(path + '/data/transit/stds_refolded.npy', allow_pickle = True)
     theta = np.loadtxt(path + '/data/transit/theta_max.txt')
     rp_i, a_i, b_i, u1_i, u2_i  = theta[0], theta[1], theta[2], theta[3], theta[4]
@@ -145,9 +145,9 @@ def run_mcmc_a(planet_name,
   else:
     out_pdf =  path + '/figures/mcmc_a.pdf'
     pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
-    flux = np.load(path + '/data/transit/corrected_flux_clean.npy', allow_pickle=True)
-    time = np.load(path + '/data/transit/individual_time_folded_array_clean.npy', allow_pickle=True) 
-    stds = np.load(path + '/data/transit/stds_clean.npy', allow_pickle = True)
+    flux = np.load(path + '/data/transit/corrected_flux.npy', allow_pickle=True)
+    time = np.load(path + '/data/transit/individual_time_folded_array.npy', allow_pickle=True) 
+    stds = np.load(path + '/data/transit/stds.npy', allow_pickle = True)
     u1_i, u2_i  = match(logg, Teff, Z, path2table)
     print("Estimates from stellar models:") 
     print('u1 ', u1_i)

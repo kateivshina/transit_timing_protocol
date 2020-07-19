@@ -218,7 +218,7 @@ def run_mcmc_b(planet_name,
   
    
       ax[i % 6, 1].errorbar(time_i, corrected_flux, yerr=yerr, fmt='.b', capsize=0, alpha=0.5, zorder=1, markersize = 0.6)
-      ax[i % 6, 1].plot(tl, f_final, 'r-', alpha=0.8, lw=3, zorder=2, markersize = 0.8)
+      ax[i % 6, 1].plot(tl, f_final, 'r-', linewidth=0.8)
       ax[i % 6, 1].set_xlabel("Time [days]",  fontsize=2)
       ax[i % 6, 1].set_ylabel("Relative Flux",  fontsize=2)
       #ax[i % 6, 1].legend(('BATMAN','TESS'), loc=2, prop={'size': 2})
@@ -269,11 +269,6 @@ def run_mcmc_b(planet_name,
   np.savetxt(path + '/data/transit/t0_k_b.txt', np.array(params_final))
   np.savetxt(path + '/data/transit/t0_w_uncert.txt', np.array(t0_w_uncert))
 
-
-
-  
-
-  pdf.savefig(fig)
 
   df = pd.DataFrame(columns = ("$t_0$ (max likelihood)", "$t_0$ (mcmc)", "Uncertainty"))
   df["$t_0$ (max likelihood)"] = np.array(t0s_ml) 

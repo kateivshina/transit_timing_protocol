@@ -60,6 +60,7 @@ def o_c(planet_name,
   err = t0_w_uncert[:,1]
   t0_k_b = np.loadtxt(path + '/data/transit/t0_k_b.txt')
   t0s = t0_k_b[:, 0]
+  t0_i = t0s[0]
 
   # epoch number 
   #N = np.array(range(0, t0_k_b.shape[0]))
@@ -74,24 +75,20 @@ def o_c(planet_name,
     delta = t0s[i+1] - t0s[i]
     if delta/period > 1.5:
       shift = int(delta/period)
-      N1 = range(i)
-      end = t0s.shape[0] - len(N1)
+      N1 = range(i+1)
+      end = t0s.shape[0] - len(N1) 
       N2 = range(i+shift, i+shift+end)
       N = np.concatenate((N1, N2), axis=0)
-      print('N ', N)
+      
 
 
   # need to input actual stds
   sigma = np.mean(err)
-  per_i = float(args.period)
-  t0_i = t0s[0]
 
-
-
-  initial_params = per_i, t0_i 
+  initial_params = period, t0_i 
    
   nll = lambda *args: -lnlike(*args) 
-  initial = np.array([per_i, t0_i]) + 1e-5*np.random.randn(ndim)
+  initial = np.array([period, t0_i]) + 1e-5*np.random.randn(ndim)
   soln = minimize(nll, initial, args=(N, t0s, sigma))  
   per_ml, t0_ml  = soln.x 
   # Initialize walkers around maximum likelihood.
@@ -130,7 +127,11 @@ def o_c(planet_name,
   plt.xlabel('Epoch')
   plt.ylabel('Time deviation [min]')
   plt.title(f'{planet_name} transits (constant period model)')
-  plt.legend(f'$t0$: {t0_ml} Period: {per_ml}')
+  legend = f't0 = %.4f Period = %.4f d' % (t0_ml, per_ml)
+  #print('legend ', legend)
+  #print('legend ', f't = {t0_ml} Period = {per_ml} d')
+  plt.text(0.1,-2, legend, fontsize=8)
+
+  #plt.legend(legend)
   plt.savefig(path + '/figures/tess_o_c.png')
-  plt.show()
 

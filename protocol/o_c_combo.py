@@ -31,8 +31,8 @@ def o_c_combo(planet_name,
 
 
   # MCMC parameters
-  nsteps = 1000 
-  burn_in = 500 
+  nsteps = 50#1000 
+  burn_in = 5#500 
   ndim = 2
   nwalkers = 100
 
@@ -112,7 +112,7 @@ def o_c_combo(planet_name,
   plt.xlabel('Epoch')
   plt.ylabel('Time deviation [min]')
   plt.title(f'{planet_name} transits (constant period model)')
-  plt.legend(f'$t0$: {t0_ml} Period: {per_ml}')
+  legend = f't0 = %.4f Period = %.4f d' % (t0_ml, per_ml)
+  plt.text(20, 8, legend, fontsize=10)
   plt.savefig(path + '/figures/o_c_combined.png')
-  plt.show()
 
