@@ -1,4 +1,4 @@
-# README
+# Transit Timing Protocol
 
 Code for reading, fitting and analyzing TESS data + running MCMC to see how orbital period changes with epoch number.
 
