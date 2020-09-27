@@ -2,14 +2,10 @@
 
 Code for reading, fitting and analyzing TESS light curves + running MCMC to see how orbital period of hot Jupiters changes with epoch number.
 
-TESS data:
-1) [TESS cut](https://mast.stsci.edu/tesscut/) 
-2) [TICs for each sector](https://tess.mit.edu/observations/sector-17/)
-3) [2-minute cadence data](https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html)
 
-## Running the code:
+## How to run the code:
 
-0. Clone the GitHub repository:
+1. Clone the GitHub repository:
 
 ```
 git clone https://github.com/kateivshina/transit_timing_protocol.git
@@ -21,18 +17,6 @@ Go to the directory of the repository:
 cd transit_timing_protocol/protocol
 ```
 
-1. In pl_params.txt file, specify the parameters of the planetary system as well as where to store the output data.
-
-**Example**
-- --mission=TESS
-- --pl_hostname=WASP 19
-- --pl_letter=b
-- --cadence=2
-- --N=0.5
-- --degree=1
-- --parent_dir=/Users/kate/Documents/usrp/TTP
-- --path_to_data_file=/Users/kate/Documents/usrp/TTP/lc/wasp19_lc.fits
-
 2. To run the protocol, type in the terminal:
 
 ```
@@ -40,7 +24,7 @@ python3 main.py 1
 ```
 where 1 specifies that the first planet from our exoplanet databse is analyzed.
 
-2. To run the protocol as a job array on multiple planets using a computing cluster, submit the job as a SLURM script:
+3. To run the protocol as a job array on multiple planets using a computing cluster, submit the job as a SLURM script:
 ```
 sbatch job.sh
 ```
@@ -64,6 +48,7 @@ source activate s
 python main.py $SLURM_ARRAY_TASK_ID
 ```
 
+## What the protocol does:
 This protocol does the following:
 1. selects individual transits from the TESS light curve; 
 2. de-trends them; 
@@ -83,3 +68,10 @@ The following figures are stored in the ~/figures folder:
 5. *mcmc_a_refolded.pdf*, *mcmc_b_refolded.pdf*, *mcmc_b_corner_refolded* contains the same information as files 2-4 but for the re-folded data.
 6. *tess_o_c.png* contains O-C just for the TESS data.
 7. *o_c_combined.png* contains O-C for TESS as well as historical data.
+
+## TESS Data
+
+1) [TESS cut](https://mast.stsci.edu/tesscut/) 
+2) [TICs for each sector](https://tess.mit.edu/observations/sector-17/)
+3) [2-minute cadence data](https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html)
+
