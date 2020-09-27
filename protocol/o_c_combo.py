@@ -11,20 +11,19 @@ from argparse import ArgumentParser
 
  
 
-def o_c_combo(planet_name,
-               pl_hostname,
-               pl_letter,
-               parent_dir):
+def o_c_combo(pl_hostname,
+              pl_letter,
+              parent_dir):
 
 
-
+  planet_name = pl_hostname + pl_letter
   directory = planet_name.replace(" ", "_") 
   path = f'{parent_dir}' + f'/{directory}'  
   path2data = path + '/data/transit/o.csv'
 
   # load CSV file with the exoplanet data
-  df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv')
-  df = df.loc[df['pl_hostname'] == f'{pl_hostname.replace(" ", "-")}']
+  df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets_wo_dur.csv')
+  df = df.loc[df['pl_hostname'] == pl_hostname]#f'{pl_hostname.replace(" ", "-")}']
   df = df.loc[df['pl_letter'] == f'{pl_letter}']
   per_i = df['pl_orbper'].iloc[0]
 
@@ -43,7 +42,7 @@ def o_c_combo(planet_name,
 
   # need to input actual stds
   sigma = np.mean(err)
-  t0_i = 2456021.70374
+  t0_i = 2455138.7439
 
   # Priors.
   def lnprior(theta, t0_init): 
@@ -113,6 +112,7 @@ def o_c_combo(planet_name,
   plt.ylabel('Time deviation [min]')
   plt.title(f'{planet_name} transits (constant period model)')
   legend = f't0 = %.4f Period = %.4f d' % (t0_ml, per_ml)
-  plt.text(20, 8, legend, fontsize=10)
+  plt.text(20, 10, legend, fontsize=10)
   plt.savefig(path + '/figures/o_c_combined.png')
+  plt.show()
 

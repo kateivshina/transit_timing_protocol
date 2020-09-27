@@ -1,6 +1,5 @@
 import numpy as np
 import time as timing 
-import exoplanet as xo
 import pandas as pd
 import os
 import sys
@@ -11,14 +10,13 @@ import matplotlib.backends.backend_pdf
 from scipy.signal import savgol_filter
 from argparse import ArgumentParser
 import matplotlib as mpl
-from lightkurve import search_targetpixelfile
-
+#from lightkurve import search_targetpixelfile
 
 
  
 #################################################################
 
-def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux):
+def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_flux, length, N):
     '''
     This function applies transit mask to TESS data to select individual transits 
     and stores fluxes and times of transits in .txt file
@@ -41,7 +39,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
 
     indx = []
     indx.append(0)
-    for i in range(1,time_folded.shape[0]):
+    for i in range(1, time_folded.shape[0]):
         if (time_folded[i] < 0 and time_folded[i-1] > 0):
             indx.append(i)
 
@@ -49,7 +47,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
     flux_array = []
     time_array = []
     time_folded_array = []
-    
+ 
 
 
     for i in range(len(indx)):
@@ -57,17 +55,14 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
             data_ = flux[indx[i]:indx[i+1]]
             time_ = times[indx[i]:indx[i+1]]
             time_folded_ = time_folded[indx[i]:indx[i+1]]
-            flux_array.append(data_)
-            time_array.append(time_)
-            time_folded_array.append(time_folded_)
-            if transit == True:
-                fig = plt.figure()
-                plt.plot(time_, data_, '.k')
-                plt.xlabel("Time [days]")
-                plt.ylabel("Relative flux")
-                plt.close(fig)
+            time_list = list(time_)
+            max_diff = max([time_list[i+1]-time_list[i] for i in range(len(time_list)-1) if time_list[i]<time_list[i+1]])
 
-            
+            if max_diff < 1.1*N*length:
+                time_folded_array.append(time_folded_)
+                flux_array.append(data_)
+                time_array.append(time_)      
+      
         else:
             data_ = flux[indx[i]:]
             time_ = times[indx[i]:]
@@ -75,12 +70,7 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
             flux_array.append(data_)
             time_array.append(time_)
             time_folded_array.append(time_folded_)
-            if transit == True:
-                fig = plt.figure()
-                plt.plot(time_, data_, '.k')
-                plt.xlabel("Time [days]")
-                plt.ylabel("Relative flux")
-                plt.close(fig)
+ 
     
     flux_array = np.array(flux_array, dtype=object, copy=False)
     time_array = np.array(time_array, dtype=object, copy=False)
@@ -90,6 +80,8 @@ def select_transits(transit, path, path_to_times, path_to_times_folded, path_to_
     np.save(path + '/individual_time_array.npy', time_array)
     np.save(path + '/individual_time_folded_array.npy', time_folded_array)
     data = np.load(path + '/individual_flux_array.npy', allow_pickle=True)
+
+ 
  
     # to load .npy, use np.load(path + '/transit_flux.npy', allow_pickle=True))
 
@@ -163,24 +155,25 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         corrected_flux_i = flux_i/fit
         
         # fit for the points outside of transit
-        fit_out = k*time_i_out+b 
+        fit_out = a * time_i_out * time_i_out + b * time_i_out + c
 
         y = flux_i_out/fit_out
         # append the data to list
         corrected_flux.append(corrected_flux_i)
         stds.append(np.std(y))
-        coeffs.append([k, b])
+        coeffs.append([a, b, c])
         
         #ax = fig.add_subplot(flux_masked.shape[0], 3, i+1)
         #plt.subplot(flux_masked.shape[0], 3, 1)
         ax[i % 6, 0].plot(time_i, fit, 'r', linewidth=0.8)
         ax[i % 6, 0].plot(time_i, flux_i, '.b', markersize = 0.8)
        # plt.title('Flux + Fit')
-        ax[i % 6, 0].set_xlabel("Time [days]",  fontsize=2)
-        ax[i % 6, 0].set_ylabel("Flux",  fontsize=2) 
+        ax[i % 6, 0].set_xlabel("Time [days]",  fontsize=3)
+        ax[i % 6, 0].set_ylabel("Flux",  fontsize=3) 
         plt.xticks(fontsize=8, rotation=45)
         ax[i % 6, 0].xaxis.set_tick_params(labelsize=3)
         ax[i % 6, 0].yaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 0].ticklabel_format(useOffset=False)
 
 
     
@@ -188,23 +181,26 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
         #plt.subplot(flux_masked.shape[0], 3, 2)
         ax[i % 6, 1].plot(time_i, corrected_flux_i, '.b', markersize = 0.8)
        # plt.title('De-trended flux')
-        ax[i % 6, 1].set_xlabel("Time [days]",  fontsize=2)
-        ax[i % 6, 1].set_ylabel("Relative flux",  fontsize=2)
+        ax[i % 6, 1].set_xlabel("Time [days]",  fontsize=3)
+        ax[i % 6, 1].set_ylabel("Relative flux",  fontsize=3)
         plt.xticks(fontsize=8)
         ax[i % 6, 1].xaxis.set_tick_params(labelsize=3)
         ax[i % 6, 1].yaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 1].ticklabel_format(useOffset=False)
         
         
         #ax = fig.add_subplot(flux_masked.shape[0], 3, i+3)
         #plt.subplot(flux_masked.shape[0], 3, 3)
+        fit = a * time_i * time_i + b * time_i + c
         residuals = flux_i - fit
         ax[i % 6, 2].plot(time_i, residuals, '.b', markersize = 0.8)
        # plt.title('Residuals')
-        ax[i % 6, 2].set_xlabel("Time [days]",  fontsize=2)
-        ax[i % 6, 2].set_ylabel("Residuals",  fontsize=2)
+        ax[i % 6, 2].set_xlabel("Time [days]",  fontsize=3)
+        ax[i % 6, 2].set_ylabel("Residuals",  fontsize=3)
         plt.xticks(fontsize=8)
         ax[i % 6, 2].xaxis.set_tick_params(labelsize=3)
         ax[i % 6, 2].yaxis.set_tick_params(labelsize=3)
+        ax[i % 6, 2].ticklabel_format(useOffset=False)
        # plt.show()
         fig.tight_layout()    
 
@@ -212,6 +208,9 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
     plt.close(fig)
 
     corrected_flux = np.array(corrected_flux, dtype=object, copy=False)
+ 
+    
+
 
     np.save(path + '/corrected_flux.npy', corrected_flux)
     np.save(path + '/stds.npy', stds)
@@ -225,8 +224,7 @@ def detrend(path, path_to_times, path_to_flux, path_to_time_masked, path_to_flux
 #################################################################
 # Read fits file
 #################################################################
-def process_tess(planet_name,
-                 pl_hostname,
+def process_tess(pl_hostname,
                  pl_letter,
                  cadence,
                  N,
@@ -234,40 +232,46 @@ def process_tess(planet_name,
                  path_to_data_file,
                  parent_dir): 
     t0 = timing.time() 
-    directory = planet_name.replace(" ", "_") 
-    path = f'{parent_dir}' + f'/{directory}' 
+    planet_name = pl_hostname + pl_letter
+    directory = planet_name.replace("-", "_") 
+    path = parent_dir + f'/{directory}'  
+
     path_to_data = path + '/data' 
 
     # load CSV file with the exoplanet data
-    df = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets.csv')
-    df = df.loc[df['pl_hostname'] == f'{pl_hostname.replace(" ", "-")}']
-    #print('df ', df)
-    df = df.loc[df['pl_letter'] == f'{pl_letter}']
-    pl_trandur = df['pl_trandur'].iloc[0]
-
-    G = 6.67e-10 # gravitational constant
-    if np.isnan(pl_trandur):
-        # estimate transit duration
-        M = df['st_mass'].iloc[0] * 1.989e+30 # in kg
-        a = df['pl_orbsmax'].iloc[0] * 1.496e+11 # in meters
-        R = df['st_rad'].iloc[0] * 696.34 * 10e6 # in meters
-        if np.isnan(M) or np.isnan(a) or np.isnan(R):
-            print('Could not estimate transit duration')
-            sys.exit(0)
-
-        v = (G*M/a)**0.5
-        pl_trandur = (2*R/v)/86400 # transit duration in days
+    df_origin = pd.read_csv(os.path.dirname(os.getcwd()) + '/data/hot_jupyter_sample.csv')
+    df = df_origin.loc[df_origin['System'] == pl_hostname]#f'{pl_hostname.replace(" ", "-")}']
+     
+   # df = df.loc[df['pl_letter'] == f'{pl_letter}']
+    indx = df_origin.index[df_origin['System'] ==  pl_hostname]
+ 
+    pl_trandur = df['length'].iloc[0]
+    pl_orbper =  df['Period'].iloc[0]
+    bls_t0_i = df['T0'].iloc[0]
+    length = df['length'].iloc[0]
+ 
+     
 
 
     if int(cadence) == 2:
         out_pdf = path + '/figures/preprocess.pdf'
         pdf = matplotlib.backends.backend_pdf.PdfPages(out_pdf)
         figs = plt.figure()
+       # with fits.open(path_to_data_file, mode="readonly") as hdulist:
+        print('path to data file ', path_to_data_file)
+ 
+
         with fits.open(path_to_data_file, mode="readonly") as hdulist:
+       
             tess_bjds = hdulist[1].data['TIME']
             sap_fluxes = hdulist[1].data['SAP_FLUX']
             pdcsap_fluxes = hdulist[1].data['PDCSAP_FLUX']
             tic = hdulist[0].header['OBJECT']
+            contamination =  hdulist[1].header['CROWDSAP']
+            print(f'contamination: {contamination}')
+    
+            #print( hdulist[1].header)
+            
 
         # plot pixel target file    
         #tpf = search_targetpixelfile(f'{tic}').download()
@@ -283,10 +287,37 @@ def process_tess(planet_name,
         # Plot the timeseries in black circles.
         ax.plot(tess_bjds, pdcsap_fluxes, '.k', markersize=1)
         ax.set_title(f'{planet_name}')
-        plt.xlabel('Time')
-        plt.ylabel('Flux')
+        plt.xlabel('Time [days]')
+        plt.ylabel('Flux [e/sec]')
         pdf.savefig(fig)
         plt.close(fig)
+
+        fig, ax = plt.subplots(3)
+  
+        
+        #ax = fig.add_subplot(flux_masked.shape[0], 3, i+1)
+        #plt.subplot(flux_masked.shape[0], 3, 1)
+        num_pts = pdcsap_fluxes.shape[0]
+
+        ax[0].plot(tess_bjds[:int(num_pts/3)], pdcsap_fluxes[:int(num_pts/3)], '.k', markersize=0.8)
+        ax[0].set_xlabel("Time [days]")
+        ax[0].set_ylabel("Flux [e/sec]") 
+        ax[1].plot(tess_bjds[int(num_pts/3):int(num_pts*2/3)], pdcsap_fluxes[int(num_pts/3):int(num_pts*2/3)], '.k', markersize = 0.8)
+        ax[1].set_xlabel("Time [days]")
+        ax[1].set_ylabel("Flux [e/sec]") 
+        ax[2].plot(tess_bjds[int(num_pts*2/3):], pdcsap_fluxes[int(num_pts*2/3):], '.k', markersize = 0.8)
+        ax[2].set_xlabel("Time [days]")
+        ax[2].set_ylabel("Flux [e/sec]") 
+        
+
+        pdf.savefig(fig)
+        plt.close(fig)
+
+
+
+
+
+
 
         with fits.open(path_to_data_file, mode="readonly") as hdulist:
             aperture = hdulist[2].data
@@ -296,6 +327,7 @@ def process_tess(planet_name,
        # plt.show()
        # pdf.savefig(fig)
        # plt.close(fig)
+
 
              
 
@@ -324,61 +356,65 @@ def process_tess(planet_name,
         # Periodogram
         model = BoxLeastSquares(time, pdcsap_fluxes)
         periodogram = model.autopower(0.2)
-        plt.plot(periodogram.period, periodogram.power)  
-        plt.xlabel("Period [day]")
-        plt.ylabel("Power")
-        plt.text(10,2117,
-            "period = {0:.4f} d".format(periodogram.period[np.argmax(periodogram.power)]))
-
-
-     
-        period_grid = np.exp(np.linspace(np.log(0.05), np.log(15), 50000))
-
-        bls = BoxLeastSquares(time, pdcsap_fluxes)
-        bls_power = bls.power(period_grid, 0.02, oversample=20)
-     
-        # Save the highest peak as the planet candidate
-        index = np.argmax(bls_power.power)
-        bls_period = bls_power.period[index]
-        bls_t0 = bls_power.transit_time[index]
-        bls_depth = bls_power.depth[index]
-       #transit_mask = bls.transit_mask(time, bls_period, 0.6*pl_trandur, bls_t0)
+        #plt.plot(periodogram.period, periodogram.power)  
+        #plt.xlabel("Period [day]")
+        #plt.ylabel("Power")
+        #plt.text(10,2117,
+        #    "period = {0:.4f} d".format(periodogram.period[np.argmax(periodogram.power)]))
 
          
+        period_grid = np.exp(np.linspace(np.log(0.05), np.log(15), 50000))
+        bls = BoxLeastSquares(time, pdcsap_fluxes)
+        bls_power = bls.power(period_grid, 0.02, oversample=20)
+        # Save the highest peak as the planet candidate
+        index = np.argmax(bls_power.power)
+        bls_t0 = bls_power.transit_time[index]
+        delta = round((bls_t0 + 2457000 - bls_t0_i)/pl_orbper)
+        bls_t0 = bls_t0_i + delta*pl_orbper - 2457000
+     
+ 
+        
+        if np.isnan(pl_orbper):
+            bls_period = bls_power.period[index]
+            df_origin.loc[indx, 'Period'] = bls_period
+             
+        else:
+            bls_period = pl_orbper
 
-
+ 
+        #transit_mask = bls.transit_mask(time, bls_period, 0.6*pl_trandur, bls_t0)
         x = np.ascontiguousarray(time, dtype=np.float64)
         y = np.ascontiguousarray(pdcsap_fluxes, dtype=np.float64) 
-
-
          
         # Plot the folded transit
          
         x_fold = (time - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
 
-        m = np.abs(x_fold) < N*0.5*pl_trandur
-        transit_mask =  np.abs(x_fold) < 0.1*pl_trandur
+        m = np.abs(x_fold) < N*pl_trandur  
+        transit_mask =  np.abs(x_fold) < pl_trandur  
         not_transit = ~transit_mask
 
         # folded data with transit masked:
         total_mask = m & not_transit
         flux_masked = pdcsap_fluxes[total_mask]
         time_masked = x_fold[total_mask]
-        times_masked = time[total_mask] # times (not relative)
+        times_masked = time[total_mask]  
         # folded data with transit included:
         flux_folded = pdcsap_fluxes[m]
         time_folded = x_fold[m]
         times = time[m]
 
-        fig, ax = plt.subplots()
+        
 
+        fig, ax = plt.subplots()
         # Plot the timeseries in black circles.
         ax.plot(x, y, '.k', markersize=1)
         ax.plot(x[transit_mask], y[transit_mask], '.r', markersize=1)
         ax.set_title('Transit data (red)')
-        plt.xlabel('Time')
-        plt.ylabel('Flux')
+        plt.xlabel('Time [days]')
+        plt.ylabel('Flux [e/sec]')
         pdf.savefig(fig)
+        #plt.show()
         plt.close(fig)
      
         fig, ax = plt.subplots()
@@ -387,9 +423,10 @@ def process_tess(planet_name,
         ax.plot(x, y, '.k', markersize=1)
         ax.plot(times_masked, flux_masked, '.r', markersize=1)
         ax.set_title('Out-of-transit data (red)')
-        plt.xlabel('Time')
-        plt.ylabel('Flux')
+        plt.xlabel('Time  [days]')
+        plt.ylabel('Flux [e/sec]')
         pdf.savefig(fig)
+        #plt.show()
         plt.close(fig)
 
     else:
@@ -411,7 +448,7 @@ def process_tess(planet_name,
         mean_img = np.median(flux, axis=0) # for each pixel, calculate median flux over the period of observations
          
         plt.figure()
-        plt.imshow(mean_img.T, cmap="gray_r")
+        #plt.imshow(mean_img.T, cmap="gray_r")
         plt.title(f"image of {planet_name}")
         plt.xticks([])
         plt.yticks([]);
@@ -610,8 +647,7 @@ def process_tess(planet_name,
         times = time[m]
 
 
-
-
+ 
 
     # save folded transits
     np.savetxt(path_to_data + '/transit/times.txt', times)
@@ -623,20 +659,24 @@ def process_tess(planet_name,
     np.savetxt(path_to_data + '/transit_masked/time_masked.txt', times_masked)
     np.savetxt(path_to_data + '/transit_masked/flux_masked.txt', flux_masked)
 
-
+ 
     # transits
     select_transits(True,
                     path_to_data + '/transit', 
                     path_to_data + '/transit/times.txt',
                     path_to_data + '/transit/time_folded.txt',
-                    path_to_data + '/transit/flux.txt')
+                    path_to_data + '/transit/flux.txt',
+                    length,
+                    N)
 
     # out of transits
     select_transits(False,
                     path_to_data + '/transit_masked', 
                     path_to_data + '/transit_masked/time_masked.txt',
                     path_to_data + '/transit_masked/folded_time_masked.txt',
-                    path_to_data + '/transit_masked/flux_masked.txt')
+                    path_to_data + '/transit_masked/flux_masked.txt',
+                    length,
+                    N)
 
 
     detrend(path_to_data + '/transit', 
@@ -647,7 +687,10 @@ def process_tess(planet_name,
             degree,
             pdf)
 
+    
+
     pdf.close()
+    df_origin.to_csv(os.path.dirname(os.getcwd()) + '/data/sampled_planets_wo_dur.csv')
     t1 = timing.time()
     print('Execution time (process tess): {:.2f} min'.format((t1-t0)/60))
  
