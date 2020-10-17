@@ -38,23 +38,16 @@ def main():
 
 		
 	#process_tess(pl_hostname, pl_letter, cadence, N, degree, os.path.dirname(os.getcwd()) + '/light_curves' + f'/{pl_hostname}.fits', parent_dir)
-	#run_mcmc_a(pl_hostname, pl_letter, parent_dir, False)
-	run_mcmc_b(pl_hostname, pl_letter, parent_dir, False)
+	run_mcmc_a(pl_hostname, pl_letter, parent_dir, False)
+	#run_mcmc_b(pl_hostname, pl_letter, parent_dir, False)
 
 	#refold(pl_hostname, pl_letter, parent_dir, N)
 
-	#run_mcmc_a(pl_hostname, pl_letter, parent_dir, True)
+	run_mcmc_a(pl_hostname, pl_letter, parent_dir, True)
 	#run_mcmc_b( pl_hostname, pl_letter, parent_dir, True)
 
 	#o_c(pl_hostname, pl_letter, parent_dir)
 		#o_c_combo(pl_hostname, pl_letter, parent_dir)
-
-
-	#except:
-	#	print('failed')
-
-		#not_found.append(pl_hostname)
-		#np.savetxt(path + '/no_lc.csv', not_found, fmt='%s')
 
 
 

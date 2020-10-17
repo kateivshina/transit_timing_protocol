@@ -14,28 +14,76 @@ import matplotlib.backends.backend_pdf
 import sys
 from scipy.optimize import Bounds
 from lmfit import Model
+from lmfit import Minimizer, Parameters, report_fit
+
+def find_nearest_z(array, value):
+  epsilon = 0.05
+  indx = []
+  for i in range(array.shape[0]):
+    if np.abs(array[i] - value) < epsilon:
+      indx.append(i)
+
+  return indx
+
+def find_nearest_g(array, value):
+  epsilon = 0.35
+  indx = []
+  for i in range(array.shape[0]):
+    if np.abs(array[i] - value) < epsilon:
+      indx.append(i)
+
+  return indx
+
+def find_nearest_T(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
  
-def match(g, t, z, path2table):
+def intersection(lst1, lst2): 
+    lst3 = [value for value in lst1 if value in lst2] 
+    return lst3 
+  
+
+def match(g, t, z_star, path2table):
+  print(f'g {g}, t {t}, z_star {z_star}')
+
   table = pd.read_csv(path2table, delimiter=',')
-  arr = np.array([g, t, z]).reshape([1,3])
-  x = table['logg']
-  y = table['Teff']
-  z = table['Z']
+  arr = np.array([g, t, z_star]).reshape([1,3])
+  
+  x = table['Z']
+  y = table['logg']
+  z = table['Teff']
+
   data = np.stack((x,y,z), axis = 1)
-  data = np.vstack((data, arr))
-  dist = euclidean_distances(data, data)
-  euclid_dist = np.delete(dist[-1], 0)
-  min_idx = np.argmin(euclid_dist)
-  closest_u1 = table['aLSM'].iloc[min_idx]
-  closest_u2 = table['bLSM'].iloc[min_idx]
+  #data = np.vstack((data, arr))
+
+  indx_z = find_nearest_z(x, z_star)
+  indx_g = find_nearest_g(y, g)
+  indx = intersection(indx_z, indx_g)
+ 
+  res_list_T = [z[i] for i in indx]
+  res_list_z = [x[i] for i in indx]
+  res_list_g = [y[i] for i in indx]
+
+  table_a = [table['aLSM'].iloc[i] for i in indx]
+  table_b = [table['bLSM'].iloc[i] for i in indx]
+
+  min_idx = find_nearest_T(np.array(res_list_T), t)
+ 
+  #print('idx ', min_idx)
+  print('z, g, t ', res_list_z[min_idx], res_list_g[min_idx], res_list_T[min_idx])
+
+  closest_u1 = table_a[min_idx]
+  closest_u2 = table_b[min_idx]
   return closest_u1, closest_u2
 
 
 
 
 
-def lnlike(theta, x, y, sigma, per):
-  r, a, b, u1, u2 = theta
+def lnlike(theta, x, y, sigma, per, u1, u2):
+  r, a, b = theta
   # Set up transit parameters.
   params = batman.TransitParams()
   params.t0 = 0
@@ -57,25 +105,25 @@ def lnlike(theta, x, y, sigma, per):
  
 
 
-def lnprior(theta, u1_0, u2_0):
-  rp, a, b, u1, u2 = theta
+def lnprior(theta):
+  rp, a, b = theta
+  #if (0. < rp < 0.2) \
+  #and (0 <= a < 10) \
+  #and (0. <= b < 0.5):
   if (0. < rp) \
-  and (0. <= a) \
-  and (0. <= b < a) \
-  and (0. < u1) \
-  and (0. < u1+2*u2) \
-  and (u1+u2 < 1):
-    return -100*((u1-u1_0)**2)*(u2-u2_0)**2
+  and (0 <= a) \
+  and (0. <= b < 1):
+    return 0
   return -np.inf
 
 
 
 # Define log of probability function.
 def lnprob(theta, x, y, sigma, u1_0, u2_0, per):
-  lp = lnprior(theta, u1_0, u2_0)
+  lp = lnprior(theta)
   if not np.isfinite(lp):
     return -np.inf
-  return lp + lnlike(theta, x, y, sigma, per)
+  return lp + lnlike(theta, x, y, sigma, per, u1_0, u1_0)
 
 
 
@@ -102,6 +150,7 @@ def run_mcmc_a(pl_hostname,
 
   logg = df['st_logg'].iloc[0]
   Teff = df['Teff'].iloc[0]
+  print('Effective T: ', Teff)
   Z = df['Z'].iloc[0]
   per = df['Period'].iloc[0]
  
@@ -121,14 +170,10 @@ def run_mcmc_a(pl_hostname,
     time = np.load(path + '/data/transit/individual_time_folded_array_refolded.npy', allow_pickle=True) 
     stds = np.load(path + '/data/transit/stds_refolded.npy', allow_pickle = True)
     theta = np.loadtxt(path + '/data/transit/theta_max.txt')
-    rp_i, a_i, b_i, u1_i, u2_i  = theta[0], theta[1], theta[2], theta[3], theta[4]
-    if np.isnan(logg) or np.isnan(Teff) or np.isnan(Z):
-      print('Could not find logg or Teff or Z')
-      u1_st, u2_st  = 0.65, 0.1 
-    else:
-      u1_st, u2_st = match(logg, Teff, Z, path2table)  
-
+    rp_i, a_i, b_i, u1_st, u2_st = theta[0], theta[1], theta[2], theta[3], theta[4]
+   
     
+
   else:
     
     out_pdf =  path + '/figures/mcmc_a.pdf'
@@ -140,10 +185,9 @@ def run_mcmc_a(pl_hostname,
     if np.isnan(logg) or np.isnan(Teff) or np.isnan(Z):
       print('Could not find logg or Teff or Z')
       u1_st, u2_st  = 0.65, 0.1 
-      u1_i, u2_i  = 0.65, 0.1 
     else:
       u1_st, u2_st = match(logg, Teff, Z, path2table)  
-      u1_i, u2_i  = match(logg, Teff, Z, path2table) 
+     
 
     print("Estimates from stellar models:") 
     print('u1 ', u1_st)
@@ -164,18 +208,19 @@ def run_mcmc_a(pl_hostname,
   
  
   # MCMC parameters
-  nsteps = 5000 
-  burn_in = 3500
-  ndim = 5
+  nsteps = 4000 
+  burn_in = 3000
+  ndim = 3
   nwalkers = 100
 
-  initial_params = rp_i, a_i, b_i, u1_i, u2_i 
+  initial_params = rp_i, a_i, b_i 
   # Initialize walkers around maximum likelihood.
   pos = [initial_params + 1e-10*np.random.randn(ndim) for i in range(nwalkers)]
   sigma = np.mean(stds, axis=0)
   flux =  np.concatenate(flux, axis=0)
   
   time =  np.concatenate(time, axis=0)
+  plt.plot(time, flux, 'b.')
 
   def transit_model(x, r, a, b, u1, u2):
      
@@ -196,7 +241,15 @@ def run_mcmc_a(pl_hostname,
     return model
     
 
- 
+  # define objective function: returns the array to be minimized
+  def fcn2min(params, x, data, u1, u2):
+    r = params['r']
+    a = params['a']
+    b = params['b']
+   
+    model = transit_model(x, r, a, b, u1, u2)
+    return model - data
+   
 
   #nll = lambda *args: -lnlike_fit(*args)
   #initial = np.array([rp_i, a_i, b_i])  
@@ -204,40 +257,62 @@ def run_mcmc_a(pl_hostname,
   #print('Optimization success: ', soln.success)
   #rp_ml, a_ml, b_ml = soln.x
 
-  gmodel = Model(transit_model)
-  result = gmodel.fit(flux, x = time, r = rp_i, a = a_i, b = b_i, u1 = u1_i, u2 = u2_i)
+#pars = Parameters()
+#pars.add('x', value=5, vary=True)
+#pars.add('delta', value=5, max=10, vary=True)
+#pars.add('y', expr='delta-x')
 
-  print(result.fit_report())
+  #gmodel = Model(transit_model)
+  pars = Parameters()
+
+  pars.add('r', value = rp_i, min = 0)
+  pars.add('a', value = a_i, min = 0)
+  pars.add('delta_ab', value = b_i/a_i, min = 0, max = 1)
+  pars.add('b', expr='delta_ab * a')
+  pars.add('u1', value = u1_st, vary = False)
+  pars.add('u2', value = u2_st, vary = False)
+
+
+  # do fit, here with the default leastsq algorithm
+  minner = Minimizer(fcn2min, pars, fcn_args=(time, flux, u1_st, u2_st))
+  result = minner.minimize()
+
+  # calculate final result
+  final = flux + result.residual
+
+  plt.plot(time, flux, 'b.')
+  plt.plot(time, final, 'r.', label='best fit')
+   
+
+  print(report_fit(result))
  
+  
 
   #plt.plot(time, flux, '.b')
   #plt.plot(time, result.init_fit, 'k--', label='initial fit')
-  plt.plot(time, result.best_fit, '.k')
+  #plt.plot(time, result.best_fit, '.k')
   #plt.show()
   rp_ml = result.params['r'].value
   a_ml = result.params['a'].value
   b_ml = result.params['b'].value
-  u1_ml = result.params['u1'].value
-  u2_ml = result.params['u2'].value
 
  
   theta_max = []
-  theta_max.append(result.params['r'].value)
-  theta_max.append(result.params['a'].value)
-  theta_max.append(result.params['b'].value)
-  theta_max.append(result.params['u1'].value)
-  theta_max.append(result.params['u2'].value)
+  theta_max.append(rp_ml)
+  theta_max.append(a_ml)
+  theta_max.append(b_ml)
+  theta_max.append(u1_st)
+  theta_max.append(u2_st)
  
   
   print("Maximum likelihood estimates:")
   print(f"rp_ml = {rp_ml} vs rp_i = {rp_i} ")
   print(f"a_ml = {a_ml} vs {a_i}")
   print(f"b_ml = {b_ml} vs {b_i}")
-  print(f"u1_ml = {u1_ml} vs {u1_i}")
-  print(f"u2_ml = {u2_ml} vs {u2_i}")
+ 
   yerr = np.full((time.shape[0]), sigma) 
   np.savetxt(path + '/data/transit/theta_max.txt', theta_max)
-
+ 
   # choose k - the number of bins - such that the bin's width is about 1 minute
   k = 0
   for i in range(100, 2000, 20):
@@ -283,7 +358,7 @@ def run_mcmc_a(pl_hostname,
   params_final.inc =  np.arccos(b_ml/a_ml)*(180./np.pi)
   params_final.ecc = 0
   params_final.w = 96
-  params_final.u = [u1_ml, u2_ml]
+  params_final.u = [u1_st, u2_st]
   params_final.limb_dark = "quadratic"
   tl = np.linspace(min(time),max(time),5000)
   m = batman.TransitModel(params_final, tl)
@@ -317,7 +392,7 @@ def run_mcmc_a(pl_hostname,
   # fit all data
   #sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(time, flux, sigma, u1_i, u2_i, per))
   # fit binned lc
-  sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(0.5*(bins[1:] + bins[:-1]), binned_flux, sigma, u1_i, u2_i, per))
+  sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(0.5*(bins[1:] + bins[:-1]), binned_flux, sigma, u1_st, u2_st, per))
 
   
   # Run MCMC for n steps and display progress bar.
@@ -338,20 +413,19 @@ def run_mcmc_a(pl_hostname,
  # samples = samples[:, burn_in:, :].reshape((-1, ndim))
 
   # Final params and uncertainties based on the 16th, 50th, and 84th percentiles of the samples in the marginalized distributions.
-  rp_i, a_i, b_i, u1_i, u2_i  = map(
+  rp_i, a_i, b_i  = map(
         lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 
   theta_percentiles = []
   theta_percentiles.append(rp_i)
   theta_percentiles.append(a_i)
   theta_percentiles.append(b_i)
-  theta_percentiles.append(u1_i)
-  theta_percentiles.append(u2_i)   
+ 
   np.savetxt(path + '/data/transit/theta_percentiles.txt', theta_percentiles) 
 
   #samples = sampler.flatchain
   
-  param_names = ["$rp$", "$a$", "$b$", "u1", "u2"]
+  param_names = ["$rp$", "$a$", "$b$"]
   corn_fig = corner.corner(samples, labels=param_names)
   pdf.savefig(corn_fig)
 
@@ -370,13 +444,13 @@ def run_mcmc_a(pl_hostname,
   #pdf.savefig(fig)
   np.set_printoptions(precision=6)
 
-  ml_values = np.around(np.array([rp_ml, a_ml, b_ml, u1_ml, u2_ml]), decimals=6)
+  ml_values = np.around(np.array([rp_ml, a_ml, b_ml, u1_st, u2_st]), decimals=6)
   #mcmc_values = np.around(np.array([rp_mcmc, a_mcmc, b_mcmc, u1_mcmc, u2_mcmc]), decimals=6)
-  uncrt = np.around(np.array([rp_i[1], a_i[1], b_i[1], u1_i[1], u2_i[1]]), decimals=6)
+  uncrt = np.around(np.array([rp_i[1], a_i[1], b_i[1]]), decimals=6)
 
 
   data = np.array([['Value (max likelihood)', ml_values[0], ml_values[1], ml_values[2], ml_values[3], ml_values[4]], 
-    ['Uncertainty', uncrt[0], uncrt[1], uncrt[2], uncrt[3], uncrt[4]]])
+    ['Uncertainty', uncrt[0], uncrt[1], uncrt[2], 0, 0]])
 
   #data = np.array([['Value (max likelihood)', ml_values[0], ml_values[1], ml_values[2], ml_values[3], ml_values[4]], 
   #  ['Value (MCMC)', mcmc_values[0], mcmc_values[1], mcmc_values[2], mcmc_values[3], mcmc_values[4]], 
@@ -394,7 +468,9 @@ def run_mcmc_a(pl_hostname,
 
   firstPage = plt.figure(figsize=(11.69,8.27))
   firstPage.clf()
-  txt = 'From stellar models, u1 = {:.2f} and u2 = {:.2f}'.format(u1_st, u2_st)
+
+  txt = f'g: {logg}, T: {Teff}, z: {Z}'
+
   firstPage.text(0.5,0.5,txt, transform=firstPage.transFigure, size=16, ha="center")
   pdf.savefig()
 
@@ -402,4 +478,4 @@ def run_mcmc_a(pl_hostname,
 
   t1 = timing.time()
   print('Execution time (mcmc_a) {:.2f} min'.format((t1-t0)/60))
-
+ 

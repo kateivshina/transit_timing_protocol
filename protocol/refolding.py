@@ -23,11 +23,12 @@ def refold(pl_hostname,
     #df = df.loc[df['pl_letter'] == f'{pl_letter}']
     pl_trandur = df['length'].iloc[0]
     bls_period = df['Period'].iloc[0]
- 
     t0_k_b = np.loadtxt(path + '/t0_k_b.txt')
     t0s = t0_k_b[:,0] # mid-transit times
-    ks = t0_k_b[:,1] # k coefficients of the fit
-    bs = t0_k_b[:,2] # b coefficients of the fit
+    coeff_a_s = t0_k_b[:,1] # a coefficients of the fit
+    coeff_b_s = t0_k_b[:,2] # b coefficients of the fit
+    coeff_c_s = t0_k_b[:,3] # c coefficients of the fit
+
 
     #load flux and time data
     flux = np.load(path + '/individual_flux_array.npy', allow_pickle=True)
@@ -40,38 +41,41 @@ def refold(pl_hostname,
     stds = []
 
     for i in range(flux.shape[0]):
-    	time_i = time[i]
-    	flux_i = flux[i]
-    	bls = BoxLeastSquares(time_i, flux_i)
-    	bls_t0 = t0s[i]
-    	k = ks[i]
-    	b = bs[i]
+        time_i = time[i]
+        flux_i = flux[i]
+        bls = BoxLeastSquares(time_i, flux_i)
+        bls_t0 = t0s[i]
+        a_ml = coeff_a_s[i]
+        b_ml = coeff_b_s[i]
+        c_ml = coeff_c_s[i]
 
-    	# create transit mask
-    	x_fold = (time_i - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
-    	m = np.abs(x_fold) < N * pl_trandur  
-    	transit_mask =  np.abs(x_fold) < pl_trandur  
-    	not_transit = ~transit_mask
-    	# folded data with transit masked:
-    	total_mask = m & not_transit
+        # create transit mask
+        x_fold = (time_i - bls_t0 + 0.5 * bls_period) % bls_period - 0.5 * bls_period
+        m = np.abs(x_fold) < N * pl_trandur  
+        transit_mask =  np.abs(x_fold) < pl_trandur  
+        not_transit = ~transit_mask
+        # folded data with transit masked:
+        total_mask = m & not_transit
 
-    	time_folded_ = x_fold[m] # folded transit masked time
-    	time_ = time_i[m] # transit masked time 
-    	flux_ = flux_i[m]
+        time_folded_ = x_fold[m] # folded transit masked time
+        time_ = time_i[m] # transit masked time 
+        flux_ = flux_i[m]
 
-    	fit = k*time_+b
-    	detrended_flux_ = flux_/fit
-    	# calculate std for out of transit data
-    	flux_out_ = flux_i[total_mask]
-    	time_out = time_i[total_mask]
-    	std = np.std(flux_out_/(k*time_out+b))
+        fit =a_ml * time_ * time_ + b_ml * time_ + c_ml
+        detrended_flux_ = flux_/fit
 
-    	# append the data
-    	flux_array.append(flux_)
-    	time_array.append(time_)
-    	folded_time_array.append(time_folded_)
-    	detrended_flux_array.append(detrended_flux_)
-    	stds.append(std)
+        # calculate std for out of transit data
+        flux_out_ = flux_i[total_mask]
+        time_out = time_i[total_mask]
+
+        std = np.std(flux_out_/(a_ml * time_out * time_out + b_ml * time_out + c_ml))
+
+        # append the data
+        flux_array.append(flux_)
+        time_array.append(time_)
+        folded_time_array.append(time_folded_)
+        detrended_flux_array.append(detrended_flux_)
+        stds.append(std)
 
     detrended_flux_array = np.array(detrended_flux_array, dtype=object, copy=False)
     flux_array = np.array(flux_array, dtype=object, copy=False)

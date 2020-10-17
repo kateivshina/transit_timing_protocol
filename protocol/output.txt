@@ -1,0 +1,57 @@
+path to data file  /Users/kate/Desktop/transit_timing_protocol/light_curves/KELT-18.fits
+contamination: 0.99162549
+Execution time (process tess): 0.13 min
+Estimates from stellar models:
+u1  0.017
+u2  0.2086
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 101
+    # data points      = 2535
+    # variables        = 3
+    chi-square         = 0.00845762
+    reduced chi-square = 3.3403e-06
+    Akaike info crit   = -31961.9642
+    Bayesian info crit = -31944.4504
+##  Warning: uncertainties could not be estimated:
+    delta_ab:  at initial value
+    delta_ab:  at boundary
+[[Variables]]
+    r:         0.07699004 (init = 0.09219544)
+    a:         4.30711320 (init = 5.12786)
+    delta_ab:  5.5511e-17 (init = 6.123234e-17)
+    b:         2.3909e-16 == 'delta_ab * a'
+    u1:        0.017 (fixed)
+    u2:        0.2086 (fixed)
+None
+Maximum likelihood estimates:
+rp_ml = 0.07699003858586417 vs rp_i = 0.09219544457292887 
+a_ml = 4.3071132040387585 vs 5.127859538784067
+b_ml = 2.3909281243954297e-16 vs 3.139908385324565e-16
+# of bins: 660
+Execution time (mcmc_a) 0.48 min
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 73
+    # data points      = 2453
+    # variables        = 3
+    chi-square         = 0.00339811
+    reduced chi-square = 1.3870e-06
+    Akaike info crit   = -33083.9951
+    Bayesian info crit = -33066.5799
+##  Warning: uncertainties could not be estimated:
+    delta_ab:  at initial value
+    delta_ab:  at boundary
+[[Variables]]
+    r:         0.08468470 (init = 0.07699004)
+    a:         5.25203528 (init = 4.307113)
+    delta_ab:  5.5511e-17 (init = 5.551115e-17)
+    b:         2.9155e-16 == 'delta_ab * a'
+    u1:        0.017 (fixed)
+    u2:        0.2086 (fixed)
+None
+Maximum likelihood estimates:
+rp_ml = 0.08468470146637119 vs rp_i = 0.07699003858586417 
+a_ml = 5.252035277284063 vs 4.3071132040387585
+b_ml = 2.9154652454921674e-16 vs 2.3909281243954297e-16
+# of bins: 660

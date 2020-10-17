@@ -1,0 +1,29 @@
+Estimates from stellar models:
+u1  0.017
+u2  0.2086
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 21
+    # data points      = 4599
+    # variables        = 3
+    chi-square         = 0.00710664
+    reduced chi-square = 1.5463e-06
+    Akaike info crit   = -61530.0905
+    Bayesian info crit = -61510.7897
+##  Warning: uncertainties could not be estimated:
+    delta_ab:  at initial value
+    delta_ab:  at boundary
+[[Variables]]
+    r:         0.07838968 (init = 0.07745967)
+    a:         3.76748558 (init = 3.61359)
+    delta_ab:  5.5511e-17 (init = 6.123234e-17)
+    b:         2.0914e-16 == 'delta_ab * a'
+    u1:        0.017 (fixed)
+    u2:        0.2086 (fixed)
+None
+Maximum likelihood estimates:
+rp_ml = 0.07838967555982945 vs rp_i = 0.07745966692414834 
+a_ml = 3.7674855813319343 vs 3.6135901019714485
+b_ml = 2.0913746186690032e-16 vs 2.212685775904946e-16
+# of bins: 400
+Execution time (mcmc_a) 0.48 min

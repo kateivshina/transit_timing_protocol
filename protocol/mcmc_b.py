@@ -266,6 +266,7 @@ def run_mcmc_b(pl_hostname,
         ax[3, (i % 6) % 3].yaxis.set_tick_params(labelsize=4)
         ax[3, (i % 6) % 3].ticklabel_format(useOffset=False)
       #  ax[3, (i % 6) % 3].set_xticklabels(time_i.round(decimals=3), rotation=40)
+      
  
 
       fig.tight_layout()    

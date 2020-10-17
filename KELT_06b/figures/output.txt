@@ -1,0 +1,58 @@
+path to data file  /Users/kate/Desktop/transit_timing_protocol/light_curves/KELT-06.fits
+contamination: 0.98854405
+Execution time (process tess): 0.11 min
+Estimates from stellar models:
+u1  0.017
+u2  0.2086
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 41
+    # data points      = 1321
+    # variables        = 3
+    chi-square         = 0.00164765
+    reduced chi-square = 1.2501e-06
+    Akaike info crit   = -17952.4003
+    Bayesian info crit = -17936.8419
+##  Warning: uncertainties could not be estimated:
+    delta_ab:  at initial value
+    delta_ab:  at boundary
+[[Variables]]
+    r:         0.07948233 (init = 0.083666)
+    a:         11.3087796 (init = 10.80468)
+    delta_ab:  5.5511e-17 (init = 6.123234e-17)
+    b:         6.2776e-16 == 'delta_ab * a'
+    u1:        0.017 (fixed)
+    u2:        0.2086 (fixed)
+None
+Maximum likelihood estimates:
+rp_ml = 0.07948233042809938 vs rp_i = 0.08366600265340755 
+a_ml = 11.30877958905455 vs 10.804677518987342
+b_ml = 6.277633740089689e-16 vs 6.615956869723607e-16
+# of bins: 780
+Execution time (mcmc_a) 0.52 min
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 21
+    # data points      = 1310
+    # variables        = 3
+    chi-square         = 0.00137875
+    reduced chi-square = 1.0549e-06
+    Akaike info crit   = -18025.3168
+    Bayesian info crit = -18009.7835
+##  Warning: uncertainties could not be estimated:
+    delta_ab:  at initial value
+    delta_ab:  at boundary
+[[Variables]]
+    r:         0.07972170 (init = 0.07948233)
+    a:         11.4090204 (init = 11.30878)
+    delta_ab:  5.5511e-17 (init = 5.551115e-17)
+    b:         6.3333e-16 == 'delta_ab * a'
+    u1:        0.017 (fixed)
+    u2:        0.2086 (fixed)
+None
+Maximum likelihood estimates:
+rp_ml = 0.07972169916155947 vs rp_i = 0.07948233042809938 
+a_ml = 11.40902041666963 vs 11.30877958905455
+b_ml = 6.33327857750256e-16 vs 6.277633740089689e-16
+# of bins: 780
+Execution time (mcmc_a) 0.58 min

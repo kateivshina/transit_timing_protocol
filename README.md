@@ -17,6 +17,17 @@ Go to the directory of the repository:
 cd transit_timing_protocol/protocol
 ```
 
+1a. Prepare anaconda environment:
+```
+module load anaconda3
+```
+```
+conda create -n ttp python=3.7 numpy pandas emcee corner scikit-learn astropy matplotlib batman-package scipy
+```
+
+```
+conda activate ttp
+```
 2. To run the protocol, type in the terminal:
 
 ```
